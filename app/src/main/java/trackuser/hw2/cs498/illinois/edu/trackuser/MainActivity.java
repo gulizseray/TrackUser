@@ -45,10 +45,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private String sensorFileName = "sensorReadings.csv";
 
     // Cached values for the sensor readings
-    float [] cachedAccelerometer = {0,0,0};
+    float [] cachedAccelerometer;
     float cachedAcceleration = 0;
-    float [] cachedGyroscope = {0,0,0};
-    float [] cachedMagnetometer = {0,0,0};
+    float [] cachedGyroscope;
+    float [] cachedMagnetometer;
     float cachedLightSensor = 0;
 
     private int numSteps = 0;
@@ -71,8 +71,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
         //initialize accelerometer
-//        senAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        mSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_FASTEST);
+        senAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_FASTEST);
 
         //initialize gyroscope
         senGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -95,6 +95,21 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         senRotation = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
+    }
+    public boolean isAllZeros(float [] a){
+        for(int i=0;i<a.length;i++)
+            if(a[i] != 0)
+                return false;
+        return true;
+
+    }
+
+    public float[] lowPassFilter( float[] input, float[] output ) {
+        if ( output == null ) return input;
+        for ( int i=0; i<input.length; i++ ) {
+            output[i] = output[i] + ALPHA * (input[i] - output[i]);
+        }
+        return output;
     }
 
     @Override
@@ -138,20 +153,21 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 //
 ////            Toast.makeText(getApplicationContext(), cachedAcceleration + " " + cachedAccelerometer[0] + " " + cachedAccelerometer[1] + " " + cachedAccelerometer[2], Toast.LENGTH_SHORT).show();
 //        }
-        if (mySensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
-            float x = sensorEvent.values[0];
-            float y = sensorEvent.values[1];
-            float z = sensorEvent.values[2];
-
-            // Low-pass filter to remove noise
-            cachedAccelerometer[0] = (1-ALPHA) * cachedAccelerometer[0] + ALPHA * x;
-            cachedAccelerometer[1] = (1-ALPHA) * cachedAccelerometer[1] + ALPHA * y;
-            cachedAccelerometer[2] = (1-ALPHA) * cachedAccelerometer[2] + ALPHA * z;
+        if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+//            float x = sensorEvent.values[0];
+//            float y = sensorEvent.values[1];
+//            float z = sensorEvent.values[2];
+//
+//            // Low-pass filter to remove noise
+//            cachedAccelerometer[0] = (1-ALPHA) * cachedAccelerometer[0] + ALPHA * x;
+//            cachedAccelerometer[1] = (1-ALPHA) * cachedAccelerometer[1] + ALPHA * y;
+//            cachedAccelerometer[2] = (1-ALPHA) * cachedAccelerometer[2] + ALPHA * z;
+            cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
 
             // Copy new values into the cachedAccelerometer array, for consistency in the written file
             //System.arraycopy(sensorEvent.values, 0, cachedAccelerometer, 0, sensorEvent.values.length);
 
-            if(cachedAccelerometer[2] > 1.69)
+            if(cachedAccelerometer[2] > 11.4)
             {
                 // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
                 if (currTime - lastStepCountTime > 300)
@@ -161,47 +177,80 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                     stepsTextView.setText(String.valueOf(numSteps));
                 }
             }
-
-            //cachedAcceleration = sqrt(x*x + y*y + z*z);
-            cachedAcceleration = sqrt(cachedAccelerometer[0]*cachedAccelerometer[0] + cachedAccelerometer[1]*cachedAccelerometer[1]
-                    + cachedAccelerometer[2]*cachedAccelerometer[2]);
+        }
+//        else if (mySensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
+//            float x = sensorEvent.values[0];
+//            float y = sensorEvent.values[1];
+//            float z = sensorEvent.values[2];
+//
+//            // Low-pass filter to remove noise
+//            cachedAccelerometer[0] = (1-ALPHA) * cachedAccelerometer[0] + ALPHA * x;
+//            cachedAccelerometer[1] = (1-ALPHA) * cachedAccelerometer[1] + ALPHA * y;
+//            cachedAccelerometer[2] = (1-ALPHA) * cachedAccelerometer[2] + ALPHA * z;
+//
+//            // Copy new values into the cachedAccelerometer array, for consistency in the written file
+//            //System.arraycopy(sensorEvent.values, 0, cachedAccelerometer, 0, sensorEvent.values.length);
+//
+//            if(cachedAccelerometer[2] > 1.69)
+//            {
+//                // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
+//                if (currTime - lastStepCountTime > 300)
+//                {
+//                    numSteps++;
+//                    lastStepCountTime = currTime;
+//                    stepsTextView.setText(String.valueOf(numSteps));
+//                }
+//            }
+//            cachedAcceleration = sqrt(cachedAccelerometer[0]*cachedAccelerometer[0] + cachedAccelerometer[1]*cachedAccelerometer[1]
+//                    + cachedAccelerometer[2]*cachedAccelerometer[2]);
 
             //Toast.makeText(getApplicationContext(), cachedAcceleration + " " + cachedAccelerometer[0] + " " + cachedAccelerometer[1] + " " + cachedAccelerometer[2], Toast.LENGTH_SHORT).show();
             //double angle = Math.atan2(x, y)/(Math.PI/180);
             //Toast.makeText(getApplicationContext(), "Angle: " + angle, Toast.LENGTH_SHORT).show();
-        }
+//        }
         else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
-            float x = sensorEvent.values[0];
-            float y = sensorEvent.values[1];
-            float z = sensorEvent.values[2];
-            System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, sensorEvent.values.length);
-
+            cachedGyroscope = sensorEvent.values;
         }
         else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
-            float x = sensorEvent.values[0];
-            float y = sensorEvent.values[1];
-            float z = sensorEvent.values[2];
-            System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, sensorEvent.values.length);
+//            float x = sensorEvent.values[0];
+//            float y = sensorEvent.values[1];
+//            float z = sensorEvent.values[2];
+//            System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, sensorEvent.values.length);
+            cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
 
         }
         else if (mySensor.getType() == Sensor.TYPE_LIGHT){
 
             cachedLightSensor = sensorEvent.values[0];
         }
-        else if (mySensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
-            float x = sensorEvent.values[0];
-            float y = sensorEvent.values[1];
-            float z = sensorEvent.values[2];
+//        else if (mySensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
+//            float x = sensorEvent.values[0];
+//            float y = sensorEvent.values[1];
+//            float z = sensorEvent.values[2];
+//
+//            float a = (float) Math.toDegrees(x);
+//            float b = (float) Math.toDegrees(y);
+//            float c = (float) Math.toDegrees(z);
+//
+//            if ( a > 45 || b > 45 || c > 45)
+//                Toast.makeText(getApplicationContext(), a + " " + b + " " + c, Toast.LENGTH_SHORT).show();
+//        }
 
-            float a = (float) Math.toDegrees(x);
-            float b = (float) Math.toDegrees(y);
-            float c = (float) Math.toDegrees(z);
+        if (cachedAccelerometer != null && cachedMagnetometer != null) {
+            float R[] = new float[9];
+            float I[] = new float[9];
 
-            if ( a > 45 || b > 45 || c > 45)
-                Toast.makeText(getApplicationContext(), x + " " + y + " " + z, Toast.LENGTH_SHORT).show();
+            if (SensorManager.getRotationMatrix(R, I, cachedAccelerometer, cachedMagnetometer)) {
+
+                // orientation contains azimut, pitch and roll
+                float orientation[] = new float[3];
+                SensorManager.getOrientation(R, orientation);
+
+                float azimut = orientation[0];
+            }
         }
 
-        writeAllReadingsToFile(currTime - startTime);
+        //writeAllReadingsToFile(currTime - startTime);
 
     }
 
@@ -234,7 +283,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-//        mSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senLinearAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senRotation, SensorManager.SENSOR_DELAY_FASTEST);
