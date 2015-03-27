@@ -28,11 +28,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     private SensorManager mSensorManager;
     private Sensor senAccelerometer;
-    private Sensor senLinearAccelerometer;
     private Sensor senGyroscope;
     private Sensor senMagnetometer;
     private Sensor senLight;
-    private Sensor senRotation;
     private long startTime = System.currentTimeMillis();
 
 
@@ -106,16 +104,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //initialize light sensor
         senLight = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         mSensorManager.registerListener(this, senLight, SensorManager.SENSOR_DELAY_FASTEST);
-
-
-        //initialize linear accelerometer
-        senLinearAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        mSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_FASTEST);
-
-        //initialize rotation sensor
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        senRotation = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-
     }
     public boolean isAllZeros(float [] a){
         for(int i=0;i<a.length;i++)
@@ -250,9 +238,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         super.onResume();
         mSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
-        mSensorManager.registerListener(this, senLinearAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-        mSensorManager.registerListener(this, senRotation, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senMagnetometer, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, senLight, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
 
