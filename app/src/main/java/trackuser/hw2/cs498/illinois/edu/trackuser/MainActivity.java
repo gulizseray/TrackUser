@@ -38,6 +38,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
 
     public static final float ALPHA = (float) 0.7;
+    public static final float FILTER_COEFFICIENT = 0.98f;
     private static final float rToD = (float) (180 / Math.PI);
 
     private File readingsFile;
@@ -51,12 +52,17 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     float [] cachedMagnetometer= new float[3];
 
     float[] magDifference = new float[3];
+
     float cachedLightSensor = 0;
 
     private int numSteps = 0;
     private float totalTurn = 0;
-    private float angleToInitial = 0;
-    float angleM = 0;
+
+    //All angles in radians
+    private float angleToInitial= 0;
+    float angleMag = 0;
+    Float angleMagInitial = null;
+    public float fusedAngle = 0;
 
     private long lastStepCountTime = startTime;
     private long lastGyroTime = startTime;
@@ -127,127 +133,218 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         return output;
     }
 
+//    @Override
+//    public void onSensorChanged(SensorEvent sensorEvent) {
+//        Sensor mySensor = sensorEvent.sensor;
+//        long currTime = System.currentTimeMillis();
+//
+//        if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+//            cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
+//
+//            if(cachedAccelerometer[2] > 11.4)
+//            {
+//                // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
+//                if (currTime - lastStepCountTime > 300)
+//                {
+//                    numSteps++;
+//                    lastStepCountTime = currTime;
+//                    stepsTextView.setText(String.valueOf(numSteps));
+//                    distanceTextView.setText(String.format("%.1f", numSteps*0.9) + "m");
+//                }
+//            }
+//        }
+//        else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
+//            long currentTime = System.currentTimeMillis();
+//            //cachedGyroscope = sensorEvent.values;
+//            System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
+//            long deltaT = (currentTime - lastGyroTime);
+//
+//            //Update position, when gyroscope exceed threshold and a minimum time has passed
+//            if(Math.abs(cachedGyroscope[2]) > 0.05 && deltaT > 50) {
+//
+//                //This checks, if Gyroscope and the differentiation of the angle to north,
+//                // obtained from the magnetometer are similar within a certain tolerance range
+//
+////                if(Math.abs(magDifference[2] - cachedGyroscope[2]) < 0.3) {
+//
+//                //perform numeric integration
+//                float addedTurn = cachedGyroscope[2] * deltaT / 1000 * rToD;
+//
+//                //add absolute value to total turn
+//                totalTurn += Math.abs(addedTurn);
+//
+//                //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
+//                angleToInitial += addedTurn;
+////                angleToInitial =  ALPHA * addedTurn + (1-ALPHA) * angleM;
+//
+//
+//                //angleToInitial = angleToInitial % 360;
+//                degreesTextView.setText(String.format("%.2f", angleToInitial) + ", " + String.format("%.2f", totalTurn));
+//                gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
+//
+//
+//                //show the user, that gyro and magnetometer were consistent, by coloring the info-area green
+//                errorDetectionTextView.setBackgroundColor(0xff19ff14);
+////                } else {
+////                    //show the user, that gyro and magnetometer were NOT consistent, by coloring the info-area red
+////                    errorDetectionTextView.setBackgroundColor(0xFFFF4E25);
+////                }
+//                //print the difference between gyro and compass in the info-area
+//                errorDetectionTextView.setText(String.valueOf(magDifference[2] - cachedGyroscope[2]));
+//                //change lastGyroTime to current time
+//                lastGyroTime = currentTime;
+//            } else if (deltaT>50) {
+//                //In this case, the time to update the angles has arrived, but there was no significant measurement on the gyro
+//                lastGyroTime = currentTime;
+//            }
+//
+//        }
+//        else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
+//            float deltaT= System.currentTimeMillis() - lastMagnetTime;
+//
+//            //update the magnetometer readings every 50ms
+//            if(deltaT > 50) {
+//                cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
+//
+//                //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
+//                float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]) * rToD;
+//
+//                //differentiate the angle numerically.
+//                magDifference[2] = (angleNew - angleM)/(deltaT*1000);
+//
+////                if(angleMInitial == null)
+////                    angleMInitial = new Float(angleNew);
+//
+//                //The measurement of this iteration will be the old one in the next iteration
+//                angleM = angleNew;
+//                //angleM = (1 - ALPHA) * angleM + ALPHA * angleNew;
+//
+//                //update display of the angle
+//                magMeasurementTextView.setText(String.format("%.3f", angleM ));
+//
+//                //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
+//                lastMagnetTime = System.currentTimeMillis();
+//            }
+//        }
+//        else if (mySensor.getType() == Sensor.TYPE_LIGHT){
+//
+//            cachedLightSensor = sensorEvent.values[0];
+//        }
+//
+////        if (cachedAccelerometer != null && cachedMagnetometer != null) {
+//        if (!isAllZeros(cachedAccelerometer) && !isAllZeros(cachedMagnetometer)) {
+//
+//            long currentTime = System.currentTimeMillis();
+//            long deltaT = (currentTime - lastAccMagTime);
+//
+//            if(deltaT > 50) {
+//
+//                float R[] = new float[9];
+//                float I[] = new float[9];
+//
+//                if (SensorManager.getRotationMatrix(R, I, cachedAccelerometer, cachedMagnetometer)) {
+//
+//                    // orientation contains azimut, pitch and roll
+//                    float orientation[] = new float[3];
+//                    SensorManager.getOrientation(R, orientation);
+//
+//                    float azimut = orientation[0] * (-1) ; //needs to be multiplied by -1 to get correct result?
+//
+//                    if(angleMInitial == null)
+//                        angleMInitial = new Float(Math.toDegrees(azimut));
+//
+//                    accMagTextView.setText(String.format("%.2f", Math.toDegrees(azimut) - angleMInitial));
+//                }
+//            }
+//        }
+//
+//        //writeAllReadingsToFile(currTime - startTime);
+//
+//    }
+
+    public void calculateAccMagOrientation(){
+
+        float R[] = new float[9];
+        float I[] = new float[9];
+
+        if (SensorManager.getRotationMatrix(R, I, cachedAccelerometer, cachedMagnetometer)) {
+
+            // orientation contains azimut, pitch and roll
+            float orientation[] = new float[3];
+            SensorManager.getOrientation(R, orientation);
+
+            float azimut = orientation[0] * (-1) ; //needs to be multiplied by -1 to get correct result?
+
+            if(angleMagInitial == null)
+                angleMagInitial = new Float(Math.toDegrees(azimut));
+
+            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * azimut;
+
+            accMagTextView.setText(String.format("%.2f", Math.toDegrees(angleMag) - angleMagInitial));
+        }
+    }
+
+    public void countSteps(){
+        long currTime = System.currentTimeMillis();
+
+        if(cachedAccelerometer[2] > 11.4)
+        {
+            // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
+            if (currTime - lastStepCountTime > 300)
+            {
+                numSteps++;
+                lastStepCountTime = currTime;
+                stepsTextView.setText(String.valueOf(numSteps));
+                distanceTextView.setText(String.format("%.1f", numSteps*0.9) + "m");
+            }
+        }
+    }
+
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         Sensor mySensor = sensorEvent.sensor;
-        long currTime = System.currentTimeMillis();
 
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
-
-            if(cachedAccelerometer[2] > 11.4)
-            {
-                // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
-                if (currTime - lastStepCountTime > 300)
-                {
-                    numSteps++;
-                    lastStepCountTime = currTime;
-                    stepsTextView.setText(String.valueOf(numSteps));
-                    distanceTextView.setText(String.format("%.1f", numSteps*0.9) + "m");
-                }
-            }
+            countSteps();
+            calculateAccMagOrientation();
         }
         else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
             long currentTime = System.currentTimeMillis();
-            //cachedGyroscope = sensorEvent.values;
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
             long deltaT = (currentTime - lastGyroTime);
 
-            //Update position, when gyroscope exceed threshold and a minimum time has passed
-            if(Math.abs(cachedGyroscope[2]) > 0.05 && deltaT > 50) {
+            //This checks, if Gyroscope and the differentiation of the angle to north,
+            // obtained from the magnetometer are similar within a certain tolerance range
 
-                //This checks, if Gyroscope and the differentiation of the angle to north,
-                // obtained from the magnetometer are similar within a certain tolerance range
+            //perform numeric integration
+//            float addedTurn = cachedGyroscope[2] * deltaT / 1000 * rToD;
+            float addedTurn = cachedGyroscope[2] * deltaT / 1000;
+//
+            //add absolute value to total turn
+            totalTurn += Math.abs(addedTurn);
 
-//                if(Math.abs(magDifference[2] - cachedGyroscope[2]) < 0.3) {
+            //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
+            angleToInitial += addedTurn;
 
-                //perform numeric integration
-                float addedTurn = cachedGyroscope[2] * deltaT / 1000 * rToD;
+            fusedAngle =  FILTER_COEFFICIENT * angleToInitial + (1-FILTER_COEFFICIENT) * (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
+//
+            //angleToInitial = angleToInitial % 360;
+            degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
+            gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
 
-                //add absolute value to total turn
-                totalTurn += Math.abs(addedTurn);
+            //change lastGyroTime to current time
+            lastGyroTime = currentTime;
 
-                //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
-                angleToInitial += addedTurn;
-//                angleToInitial =  ALPHA * addedTurn + (1-ALPHA) * angleM;
-
-
-                //angleToInitial = angleToInitial % 360;
-                degreesTextView.setText(String.format("%.2f", angleToInitial) + ", " + String.format("%.2f", totalTurn));
-                gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
-
-
-                //show the user, that gyro and magnetometer were consistent, by coloring the info-area green
-                errorDetectionTextView.setBackgroundColor(0xff19ff14);
-//                } else {
-//                    //show the user, that gyro and magnetometer were NOT consistent, by coloring the info-area red
-//                    errorDetectionTextView.setBackgroundColor(0xFFFF4E25);
-//                }
-                //print the difference between gyro and compass in the info-area
-                errorDetectionTextView.setText(String.valueOf(magDifference[2] - cachedGyroscope[2]));
-                //change lastGyroTime to current time
-                lastGyroTime = currentTime;
-            } else if (deltaT>50) {
-                //In this case, the time to update the angles has arrived, but there was no significant measurement on the gyro
-                lastGyroTime = currentTime;
-            }
 
         }
         else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
-            float deltaT= System.currentTimeMillis() - lastMagnetTime;
-
-            //update the magnetometer readings every 50ms
-            if(deltaT > 50) {
-                float[] cacheOld = cachedMagnetometer;
-                cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
-
-                //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
-                float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]) * rToD;
-
-                //differentiate the angle numerically.
-                magDifference[2] = (angleNew - angleM)/(deltaT*1000);
-
-                //The measurement of this iteration will be the old one in the next iteration
-                angleM = angleNew;
-                //angleM = (1 - ALPHA) * angleM + ALPHA * angleNew;
-
-                //update display of the angle
-                magMeasurementTextView.setText(String.format("%.3f", angleM));
-
-                //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
-                lastMagnetTime = System.currentTimeMillis();
-            }
+            System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
         }
         else if (mySensor.getType() == Sensor.TYPE_LIGHT){
 
             cachedLightSensor = sensorEvent.values[0];
         }
-
-//        if (cachedAccelerometer != null && cachedMagnetometer != null) {
-        if (!isAllZeros(cachedAccelerometer) && !isAllZeros(cachedMagnetometer)) {
-
-            long currentTime = System.currentTimeMillis();
-            long deltaT = (currentTime - lastAccMagTime);
-
-            if(deltaT > 50) {
-
-                float R[] = new float[9];
-                float I[] = new float[9];
-
-                if (SensorManager.getRotationMatrix(R, I, cachedAccelerometer, cachedMagnetometer)) {
-
-                    // orientation contains azimut, pitch and roll
-                    float orientation[] = new float[3];
-                    SensorManager.getOrientation(R, orientation);
-
-                    float azimut = orientation[0]; //needs to be multipled by -1 to get correct result?
-                    accMagTextView.setText(String.format("%.2f", Math.toDegrees(azimut)));
-                }
-            }
-        }
-
-        //writeAllReadingsToFile(currTime - startTime);
-
     }
 
     public void writeAllReadingsToFile(long timestamp){
