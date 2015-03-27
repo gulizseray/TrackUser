@@ -59,7 +59,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private float totalTurn = 0;
 
     //All angles in radians
-    private float angleToInitial= 0;
+    private float angleGyro = 0;
     float angleMag = 0;
     Float angleMagInitial = null;
     public float fusedAngle = 0;
@@ -174,12 +174,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 //                totalTurn += Math.abs(addedTurn);
 //
 //                //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
-//                angleToInitial += addedTurn;
-////                angleToInitial =  ALPHA * addedTurn + (1-ALPHA) * angleM;
+//                angleGyro += addedTurn;
+////                angleGyro =  ALPHA * addedTurn + (1-ALPHA) * angleM;
 //
 //
-//                //angleToInitial = angleToInitial % 360;
-//                degreesTextView.setText(String.format("%.2f", angleToInitial) + ", " + String.format("%.2f", totalTurn));
+//                //angleGyro = angleGyro % 360;
+//                degreesTextView.setText(String.format("%.2f", angleGyro) + ", " + String.format("%.2f", totalTurn));
 //                gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
 //
 //
@@ -325,11 +325,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             totalTurn += Math.abs(addedTurn);
 
             //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
-            angleToInitial += addedTurn;
+            angleGyro += addedTurn;
+            angleGyro %= 360;
 
-            fusedAngle =  FILTER_COEFFICIENT * angleToInitial + (1-FILTER_COEFFICIENT) * (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
+            fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
 //
-            //angleToInitial = angleToInitial % 360;
+            //angleGyro = angleGyro % 360;
             degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
             gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
 
