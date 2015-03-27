@@ -252,6 +252,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         mSensorManager.registerListener(this, senGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senLinearAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, senRotation, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, senMagnetometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
 
