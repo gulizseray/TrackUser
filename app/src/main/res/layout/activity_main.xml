@@ -41,6 +41,14 @@
         android:layout_height="wrap_content" android:layout_below="@id/degreesM"
         android:textSize="13pt"/>
 
+    <TextView android:text="total_acc_magneto:" android:id="@+id/acc_magneto" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_below="@id/degreeCounterM"
+        android:textSize="13pt"/>
+
+    <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/acc_magneto_count" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_below="@id/acc_magneto"
+        android:textSize="13pt"/>
+
     <TextView
         android:id="@+id/error_indicator"
         android:layout_width="fill_parent"
