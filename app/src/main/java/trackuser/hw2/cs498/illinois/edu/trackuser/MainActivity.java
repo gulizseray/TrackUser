@@ -11,11 +11,10 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
-import android.widget.Toast;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import static android.util.FloatMath.sqrt;
 
 /**
  * Created by gulizseray on 3/24/15.
@@ -35,27 +34,41 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private Sensor senLight;
     private Sensor senRotation;
     private long startTime = System.currentTimeMillis();
-    long lastUpdate = 0;
+
 
 
     public static final float ALPHA = (float) 0.7;
+    private static final float rToD = (float) (180 / Math.PI);
 
     private File readingsFile;
     private FileOutputStream readingsOutputStream;
     private String sensorFileName = "sensorReadings.csv";
 
     // Cached values for the sensor readings
-    float [] cachedAccelerometer;
+    float [] cachedAccelerometer = new float[3];
     float cachedAcceleration = 0;
-    float [] cachedGyroscope;
-    float [] cachedMagnetometer;
+    float [] cachedGyroscope = new float[3];
+    float [] cachedMagnetometer= new float[3];
+
+    float[] magDifference = new float[3];
     float cachedLightSensor = 0;
 
     private int numSteps = 0;
-    private long lastStepCountTime = 0;
+    private float totalTurn = 0;
+    private float angleToInitial = 0;
+    float angleM = 0;
+
+    private long lastStepCountTime = startTime;
+    private long lastGyroTime = startTime;
+    private long lastMagnetTime = startTime;
 
     private TextView stepsTextView = null;
+    private TextView distanceTextView = null;
     private TextView degreesTextView = null;
+
+    private TextView gyroMeasurementTestView = null;
+    private TextView magMeasurmentTextView = null;
+    private TextView errorDetectionTextView = null;
 
 
     public void initializeFile(){
@@ -117,55 +130,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         Sensor mySensor = sensorEvent.sensor;
         long currTime = System.currentTimeMillis();
 
-//        if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-//            float x = sensorEvent.values[0];
-//            float y = sensorEvent.values[1];
-//            float z = sensorEvent.values[2];
-//
-//            float gravity [] = new float[3];
-//            final float alpha = (float) 0.1;// Doesn't work with .8 for some reason
-//
-//            // Isolate the force of gravity with the low-pass filter.
-//            gravity[0] = alpha * gravity[0] + (1 - alpha) * x;
-//            gravity[1] = alpha * gravity[1] + (1 - alpha) * y;
-//            gravity[2] = alpha * gravity[2] + (1 - alpha) * z;
-//
-//            // Remove the gravity contribution with the high-pass filter.
-//            cachedAccelerometer[0] = x - gravity[0];
-//            cachedAccelerometer[1] = y - gravity[1];
-//            cachedAccelerometer[2] = z - gravity[2];
-//
-//            cachedAcceleration = sqrt(cachedAccelerometer[0]*cachedAccelerometer[0] + cachedAccelerometer[1]*cachedAccelerometer[1]
-//                    + cachedAccelerometer[2]*cachedAccelerometer[2]);
-//
-//            // Count steps
-//            // Peak is substantial enough to be correlated to a step
-//            if(cachedAcceleration > 2.5)
-//            {
-//                // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
-//                if (currTime - lastStepCountTime > 300)
-//                {
-//                    numSteps++;
-//                    lastStepCountTime = currTime;
-//                    stepsTextView.setText(String.valueOf(numSteps));
-//                }
-//            }
-//
-////            Toast.makeText(getApplicationContext(), cachedAcceleration + " " + cachedAccelerometer[0] + " " + cachedAccelerometer[1] + " " + cachedAccelerometer[2], Toast.LENGTH_SHORT).show();
-//        }
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-//            float x = sensorEvent.values[0];
-//            float y = sensorEvent.values[1];
-//            float z = sensorEvent.values[2];
-//
-//            // Low-pass filter to remove noise
-//            cachedAccelerometer[0] = (1-ALPHA) * cachedAccelerometer[0] + ALPHA * x;
-//            cachedAccelerometer[1] = (1-ALPHA) * cachedAccelerometer[1] + ALPHA * y;
-//            cachedAccelerometer[2] = (1-ALPHA) * cachedAccelerometer[2] + ALPHA * z;
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
-
-            // Copy new values into the cachedAccelerometer array, for consistency in the written file
-            //System.arraycopy(sensorEvent.values, 0, cachedAccelerometer, 0, sensorEvent.values.length);
 
             if(cachedAccelerometer[2] > 11.4)
             {
@@ -175,66 +141,75 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                     numSteps++;
                     lastStepCountTime = currTime;
                     stepsTextView.setText(String.valueOf(numSteps));
+                    distanceTextView.setText(String.format("%.1f", numSteps*0.9) + "m");
                 }
             }
         }
-//        else if (mySensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION){
-//            float x = sensorEvent.values[0];
-//            float y = sensorEvent.values[1];
-//            float z = sensorEvent.values[2];
-//
-//            // Low-pass filter to remove noise
-//            cachedAccelerometer[0] = (1-ALPHA) * cachedAccelerometer[0] + ALPHA * x;
-//            cachedAccelerometer[1] = (1-ALPHA) * cachedAccelerometer[1] + ALPHA * y;
-//            cachedAccelerometer[2] = (1-ALPHA) * cachedAccelerometer[2] + ALPHA * z;
-//
-//            // Copy new values into the cachedAccelerometer array, for consistency in the written file
-//            //System.arraycopy(sensorEvent.values, 0, cachedAccelerometer, 0, sensorEvent.values.length);
-//
-//            if(cachedAccelerometer[2] > 1.69)
-//            {
-//                // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
-//                if (currTime - lastStepCountTime > 300)
-//                {
-//                    numSteps++;
-//                    lastStepCountTime = currTime;
-//                    stepsTextView.setText(String.valueOf(numSteps));
-//                }
-//            }
-//            cachedAcceleration = sqrt(cachedAccelerometer[0]*cachedAccelerometer[0] + cachedAccelerometer[1]*cachedAccelerometer[1]
-//                    + cachedAccelerometer[2]*cachedAccelerometer[2]);
-
-            //Toast.makeText(getApplicationContext(), cachedAcceleration + " " + cachedAccelerometer[0] + " " + cachedAccelerometer[1] + " " + cachedAccelerometer[2], Toast.LENGTH_SHORT).show();
-            //double angle = Math.atan2(x, y)/(Math.PI/180);
-            //Toast.makeText(getApplicationContext(), "Angle: " + angle, Toast.LENGTH_SHORT).show();
-//        }
         else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
+            long currentTime = System.currentTimeMillis();
             cachedGyroscope = sensorEvent.values;
+            long deltaT = (currentTime - lastGyroTime);
+
+            //Update position, when gyroscope exceed threshold and a minimum time has passed
+            if(Math.abs(cachedGyroscope[2]) > 0.05 && deltaT > 50) {
+                //This checks, if Gyroscope and the differentiation of the angle to north,
+                // obtained from the magnetometer are similar within a certain tolerance range
+                if(Math.abs(magDifference[2] - cachedGyroscope[2]) < 0.3) {
+                    //perform numeric integration
+                    float addedTurn = cachedGyroscope[2] * deltaT / 1000 * rToD;
+                    //add absolute value to total turn
+                    totalTurn += Math.abs(addedTurn);
+                    //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
+                    angleToInitial += addedTurn;
+                    angleToInitial = angleToInitial % 360;
+                    degreesTextView.setText(String.format("%.2f", angleToInitial) + ", " + String.format("%.2f", totalTurn));
+                    gyroMeasurementTestView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
+
+
+                    //show the user, that gyro and magnetormeter were consistent, by coloring the info-area green
+                    errorDetectionTextView.setBackgroundColor(0xff19ff14);
+                } else {
+                    //show the user, that gyro and magnetometer were NOT consisten, by coloring the info-area red
+                    errorDetectionTextView.setBackgroundColor(0xFFFF4E25);
+                }
+                //print the difference between gyro and compass in the info-area
+                errorDetectionTextView.setText(String.valueOf(magDifference[2] - cachedGyroscope[2]));
+                //change lastGyroTime to current time
+                lastGyroTime = currentTime;
+            } else if (deltaT>50) {
+                //In this case, the time to update the angles has arrived, but there was no significant measurement on the gyro
+                lastGyroTime = currentTime;
+            }
+
         }
         else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
-//            float x = sensorEvent.values[0];
-//            float y = sensorEvent.values[1];
-//            float z = sensorEvent.values[2];
-//            System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, sensorEvent.values.length);
-            cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
+            float deltaT= System.currentTimeMillis() - lastMagnetTime;
 
+            //update the magnetometer readings every 50ms
+            if(deltaT > 50) {
+                float[] cacheOld = cachedMagnetometer;
+                cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
+
+                //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
+                float angleNew = (float) Math.atan((double) cachedMagnetometer[0] / cachedMagnetometer[1]) * rToD;
+
+                //differentiate the angle numerically.
+                magDifference[2] = (angleNew - angleM)/deltaT;
+
+                //The measurement of this iteration will be the old one in the next iteration
+                angleM = angleNew;
+
+                //update display of the angle
+                magMeasurmentTextView.setText(String.format("%.3f", angleM));
+
+                //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
+                lastMagnetTime = System.currentTimeMillis();
+            }
         }
         else if (mySensor.getType() == Sensor.TYPE_LIGHT){
 
             cachedLightSensor = sensorEvent.values[0];
         }
-//        else if (mySensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
-//            float x = sensorEvent.values[0];
-//            float y = sensorEvent.values[1];
-//            float z = sensorEvent.values[2];
-//
-//            float a = (float) Math.toDegrees(x);
-//            float b = (float) Math.toDegrees(y);
-//            float c = (float) Math.toDegrees(z);
-//
-//            if ( a > 45 || b > 45 || c > 45)
-//                Toast.makeText(getApplicationContext(), a + " " + b + " " + c, Toast.LENGTH_SHORT).show();
-//        }
 
         if (cachedAccelerometer != null && cachedMagnetometer != null) {
             float R[] = new float[9];
@@ -295,7 +270,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         stepsTextView = (TextView) findViewById(R.id.stepCounter);
+        distanceTextView = (TextView) findViewById(R.id.distanceValue);
         degreesTextView = (TextView) findViewById(R.id.degreeCounter);
+        gyroMeasurementTestView = (TextView) findViewById(R.id.gyroValues);
+        magMeasurmentTextView = (TextView) findViewById(R.id.degreeCounterM);
+        errorDetectionTextView = (TextView) findViewById(R.id.error_indicator);
 
         initializeSensors();
         initializeFile();
