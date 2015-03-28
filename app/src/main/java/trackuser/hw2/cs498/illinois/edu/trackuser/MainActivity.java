@@ -178,11 +178,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
             long deltaT = (currentTime - lastGyroTime);
 
-            //This checks, if Gyroscope and the differentiation of the angle to north,
-            // obtained from the magnetometer are similar within a certain tolerance range
-
             //perform numeric integration
-//            float addedTurn = cachedGyroscope[2] * deltaT / 1000 * rToD;
             float addedTurn = cachedGyroscope[2] * deltaT / 1000;
 //
             //add absolute value to total turn
@@ -194,7 +190,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
             fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * angleMagToInitial;
-            //angleGyro = angleGyro % 360;
+ 
             degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
             gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
 
@@ -207,30 +203,19 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             float deltaT= System.currentTimeMillis() - lastMagnetTime;
 
-            //update the magnetometer readings every 50ms
-//            if(deltaT > 50) {
-//
-                //cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
+            //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
+            float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
 
-                //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
-//                float angleNew = (float) Math.atan((double) cachedMagnetometer[0] / cachedMagnetometer[1]) * rToD;
-//
-                float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
+            if(angleMagInitial == null)
+                angleMagInitial = new Float(angleMag);
 
-                if(angleMagInitial == null)
-                    angleMagInitial = new Float(angleMag);
+            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
 
-                angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
+            //update display of the angle
+            magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
 
-                //The measurement of this iteration will be the old one in the next iteration
-//                angleMag = angleNew;
-
-                //update display of the angle
-                magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
-
-                //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
-                lastMagnetTime = System.currentTimeMillis();
-//            }
+            //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
+            lastMagnetTime = System.currentTimeMillis();
         }
         else if (mySensor.getType() == Sensor.TYPE_LIGHT){
 
