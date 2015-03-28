@@ -1,21 +1,30 @@
 package trackuser.hw2.cs498.illinois.edu.trackuser;
 
+import android.net.wifi.ScanResult;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.MediaRecorder;
+import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Created by gulizseray on 3/24/15.
@@ -33,6 +42,13 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private Sensor senGyroscope;
     private Sensor senMagnetometer;
     private Sensor senLight;
+
+    //WiFi
+    private WifiManager wifiManager;
+    WifiReceiver receiverWifi; //Broadcast receiver for WiFi
+    List<ScanResult> wifiList;
+    private int numDescoveredWiFiDevices = 0;
+    public static final int WIFI_SCAN_PERIOD = 5; //in seconds
 
     private long startTime = System.currentTimeMillis();
     public static final float ALPHA = (float) 0.7;
@@ -104,6 +120,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //initialize light sensor
         senLight = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         mSensorManager.registerListener(this, senLight, SensorManager.SENSOR_DELAY_FASTEST);
+
+        //initialize wifi
+        initializeWifi();
 
         //initialize microphone
         recordAudioInBackGround.start();
@@ -241,7 +260,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAudioLevel + "\n";
+        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAudioLevel + "," + numDescoveredWiFiDevices + "\n";
         try {
             readingsOutputStream.write( all.getBytes() );
             readingsOutputStream.flush();
@@ -356,4 +375,52 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             }
         }
     });
+
+    //WiFi Scanning
+    public void initializeWifi(){
+        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager.isWifiEnabled() == false)
+        {
+            Toast.makeText(getApplicationContext(), "Wi-Fi is disabled..Enabling it now.", Toast.LENGTH_LONG).show();
+            wifiManager.setWifiEnabled(true);
+        }
+
+        receiverWifi = new WifiReceiver();
+        registerReceiver(receiverWifi, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+
+        //setup timer to schedule WiFi scanning periodically
+        Timer timer = new Timer(true);
+        TimerTask wiFiScanTask = new WiFiScanTask();
+        timer.scheduleAtFixedRate(wiFiScanTask, 0, WIFI_SCAN_PERIOD * 1000);
+    }
+
+    class WiFiScanTask extends TimerTask{
+        @Override
+        public void run(){
+            wifiManager.startScan();
+        }
+    }
+
+
+    class WifiReceiver extends BroadcastReceiver {
+
+        // This method is called when number of wifi connections changes
+        public void onReceive(Context c, Intent intent) {
+
+            StringBuilder sb = new StringBuilder();
+            wifiList = wifiManager.getScanResults();
+            sb.append("\nNumber Of Wi-Fi connections :"+wifiList.size()+"\n\n");
+            numDescoveredWiFiDevices = wifiList.size();
+
+//            for(int i = 0; i < wifiList.size(); i++){
+//
+//                sb.append(new Integer(i+1).toString() + ". ");
+//                sb.append((wifiList.get(i)).toString());
+//                sb.append("\n\n");
+//            }
+
+            Toast.makeText(getApplicationContext(), sb.toString() , Toast.LENGTH_LONG).show();
+        }
+
+    }
 }
