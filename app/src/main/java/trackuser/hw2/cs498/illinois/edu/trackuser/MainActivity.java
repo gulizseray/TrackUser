@@ -43,11 +43,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private Sensor senMagnetometer;
     private Sensor senLight;
 
-    //WiFi
+    //Wi-Fi
     private WifiManager wifiManager;
-    WifiReceiver receiverWifi; //Broadcast receiver for WiFi
+    WifiReceiver receiverWifi; //Broadcast receiver for Wi-Fi
     List<ScanResult> wifiList;
-    private int numDescoveredWiFiDevices = 0;
+    private int numDiscoveredWiFiDevices = 0;
     public static final int WIFI_SCAN_PERIOD = 5; //in seconds
 
     private long startTime = System.currentTimeMillis();
@@ -260,7 +260,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAudioLevel + "," + numDescoveredWiFiDevices + "\n";
+        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAudioLevel + "," + numDiscoveredWiFiDevices + "\n";
         try {
             readingsOutputStream.write( all.getBytes() );
             readingsOutputStream.flush();
@@ -331,7 +331,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         return super.onOptionsItemSelected(item);
     }
 
-    //Audio recording
+    //Audio level recording
     private MediaRecorder mRecorder = null;
 
     public void startRecordingAudio(){
@@ -376,7 +376,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     });
 
-    //WiFi Scanning
+    //Wi-Fi Scanning
     public void initializeWifi(){
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         if (wifiManager.isWifiEnabled() == false)
@@ -409,8 +409,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             StringBuilder sb = new StringBuilder();
             wifiList = wifiManager.getScanResults();
-            sb.append("\nNumber Of Wi-Fi connections :"+wifiList.size()+"\n\n");
-            numDescoveredWiFiDevices = wifiList.size();
+            sb.append("\nNumber Of Wi-Fi connections :" + wifiList.size()+"\n\n");
+            numDiscoveredWiFiDevices = wifiList.size();
 
 //            for(int i = 0; i < wifiList.size(); i++){
 //
@@ -418,8 +418,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 //                sb.append((wifiList.get(i)).toString());
 //                sb.append("\n\n");
 //            }
-
-            Toast.makeText(getApplicationContext(), sb.toString() , Toast.LENGTH_LONG).show();
+//            Toast.makeText(getApplicationContext(), sb.toString() , Toast.LENGTH_LONG).show();
         }
 
     }
