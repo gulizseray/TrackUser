@@ -34,12 +34,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private Sensor senMagnetometer;
     private Sensor senLight;
 
-
     private long startTime = System.currentTimeMillis();
     public static final float ALPHA = (float) 0.7;
     public static final float FILTER_COEFFICIENT = 0.98f;
     private static final float rToD = (float) (180 / Math.PI);
-
 
     // File related variables
     private File readingsFile;
@@ -192,10 +190,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
             angleGyro += addedTurn;
-            angleGyro %= 360;
+            angleGyro %= 2 * Math.PI;
 
-            fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
-//
+            float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
+            fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * angleMagToInitial;
             //angleGyro = angleGyro % 360;
             degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
             gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
