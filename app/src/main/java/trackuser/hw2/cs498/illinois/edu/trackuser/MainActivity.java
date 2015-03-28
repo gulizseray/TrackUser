@@ -146,6 +146,39 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
+    public void calculateMagOrientation(){
+
+    //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
+    float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
+
+    if(angleMagInitial == null)
+        angleMagInitial = new Float(angleNew);
+
+    angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
+
+    //update display of the angle
+    magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
+
+    }
+
+    public void calculateGyroOrientation(long deltaT){
+    //perform numeric integration
+    float addedTurn = cachedGyroscope[2] * deltaT / 1000;
+//
+    //add absolute value to total turn
+    totalTurn += Math.abs(addedTurn);
+
+    //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
+    angleGyro += addedTurn;
+    angleGyro %= 2 * Math.PI;
+
+    float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
+    fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * angleMagToInitial;
+
+    degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
+    gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
+    }
+
     public void countSteps(){
         long currTime = System.currentTimeMillis();
 
@@ -178,21 +211,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
             long deltaT = (currentTime - lastGyroTime);
 
-            //perform numeric integration
-            float addedTurn = cachedGyroscope[2] * deltaT / 1000;
-//
-            //add absolute value to total turn
-            totalTurn += Math.abs(addedTurn);
-
-            //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
-            angleGyro += addedTurn;
-            angleGyro %= 2 * Math.PI;
-
-            float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
-            fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * angleMagToInitial;
- 
-            degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
-            gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
+            calculateGyroOrientation(deltaT);
 
             //change lastGyroTime to current time
             lastGyroTime = currentTime;
@@ -203,16 +222,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             float deltaT= System.currentTimeMillis() - lastMagnetTime;
 
-            //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
-            float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
-
-            if(angleMagInitial == null)
-                angleMagInitial = new Float(angleMag);
-
-            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
-
-            //update display of the angle
-            magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
+            calculateMagOrientation();
 
             //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
             lastMagnetTime = System.currentTimeMillis();
