@@ -138,11 +138,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             float azimut = orientation[0] * (-1) ; //needs to be multiplied by -1 to get correct result?
 
             if(angleMagInitial == null)
-                angleMagInitial = new Float(Math.toDegrees(azimut));
+                angleMagInitial = new Float(azimut);
 
             angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * azimut;
 
-            accMagTextView.setText(String.format("%.2f", Math.toDegrees(angleMag) - angleMagInitial));
+            accMagTextView.setText(String.format("%.2f", Math.toDegrees(angleMag - angleMagInitial)));
         }
     }
 
@@ -171,7 +171,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
             countSteps();
-            calculateAccMagOrientation();
+            //calculateAccMagOrientation();
         }
         else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
 //            long currentTime = System.currentTimeMillis();
@@ -204,6 +204,32 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
         else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
             System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
+
+            float deltaT= System.currentTimeMillis() - lastMagnetTime;
+
+            //update the magnetometer readings every 50ms
+            if(deltaT > 50) {
+                float[] cacheOld = cachedMagnetometer;
+                cachedMagnetometer = lowPassFilter(sensorEvent.values.clone(), cachedMagnetometer);
+
+                //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
+//                float angleNew = (float) Math.atan((double) cachedMagnetometer[0] / cachedMagnetometer[1]) * rToD;
+//
+                float angleNew = (float) Math.atan((double) cachedMagnetometer[0] / cachedMagnetometer[1]);
+
+                //The measurement of this iteration will be the old one in the next iteration
+                angleMag = angleNew;
+
+                if(angleMagInitial == null)
+                    angleMagInitial = new Float(angleMag);
+
+
+                //update display of the angle
+                magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
+
+                //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
+                lastMagnetTime = System.currentTimeMillis();
+            }
         }
         else if (mySensor.getType() == Sensor.TYPE_LIGHT){
 
