@@ -27,19 +27,21 @@ import java.io.IOException;
 
 public class MainActivity extends ActionBarActivity implements SensorEventListener {
 
+    // Sensors
     private SensorManager mSensorManager;
     private Sensor senAccelerometer;
     private Sensor senGyroscope;
     private Sensor senMagnetometer;
     private Sensor senLight;
+
+
     private long startTime = System.currentTimeMillis();
-
-
-
     public static final float ALPHA = (float) 0.7;
     public static final float FILTER_COEFFICIENT = 0.98f;
     private static final float rToD = (float) (180 / Math.PI);
 
+
+    // File related variables
     private File readingsFile;
     private FileOutputStream readingsOutputStream;
     private String sensorFileName = "sensorReadings.csv";
@@ -50,31 +52,27 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     float [] cachedGyroscope = new float[3];
     float [] cachedMagnetometer= new float[3];
     double cachedAudioLevel = 0;
-
-    float[] magDifference = new float[3];
-
     float cachedLightSensor = 0;
 
+    // Unknowns
     private int numSteps = 0;
     private float totalTurn = 0;
-
     //All angles in radians
     private float angleGyro = 0;
     float angleMag = 0;
     Float angleMagInitial = null;
     public float fusedAngle = 0;
 
+    // Previous update times for unknowns
     private long lastStepCountTime = startTime;
     private long lastGyroTime = startTime;
     private long lastMagnetTime = startTime;
     private long lastAccMagTime = startTime;
 
+    // TextViews
     private TextView stepsTextView = null;
     private TextView distanceTextView = null;
     private TextView degreesTextView = null;
-
-    //private TextView audioTextView = null;
-
     private TextView gyroMeasurementTextView = null;
     private TextView magMeasurementTextView = null;
     private TextView errorDetectionTextView = null;
@@ -170,13 +168,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     public void onSensorChanged(SensorEvent sensorEvent) {
         Sensor mySensor = sensorEvent.sensor;
 
+        long currentTime = System.currentTimeMillis();
+
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
             countSteps();
             calculateAccMagOrientation();
         }
         else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
-            long currentTime = System.currentTimeMillis();
+//            long currentTime = System.currentTimeMillis();
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
             long deltaT = (currentTime - lastGyroTime);
 
@@ -203,7 +203,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             //change lastGyroTime to current time
             lastGyroTime = currentTime;
 
-
         }
         else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
             System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
@@ -212,6 +211,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             cachedLightSensor = sensorEvent.values[0];
         }
+
+        writeAllReadingsToFile(currentTime - startTime);
     }
 
     public void writeAllReadingsToFile(long timestamp){
@@ -219,8 +220,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String gyr = cachedGyroscope[0] + "," + cachedGyroscope[1] + "," + cachedGyroscope[2] + ",";
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
-        //String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + " , " + cachedAcceleration + "\n";
-        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAcceleration + "\n";
+
+        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAudioLevel + "\n";
         try {
             readingsOutputStream.write( all.getBytes() );
             readingsOutputStream.flush();
@@ -323,8 +324,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     Thread recordAudioInBackGround= new Thread(new Runnable() {
         @Override
         public void run() {
-        //Your recording portion of the code goes here.
             startRecordingAudio();
+
             while(true){
                 cachedAudioLevel = getAudioAmplitude();
                 try {
