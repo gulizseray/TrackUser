@@ -7,47 +7,55 @@
 
     <TextView android:text="@string/steps_text" android:id="@+id/steps" android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/number_of_steps" android:id="@+id/stepCounter" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/steps"
-        android:textSize="16pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/distance_text" android:id="@+id/distanceText" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/stepCounter"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/distance_value" android:id="@+id/distanceValue" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/distanceText"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/degrees_text" android:id="@+id/degrees" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/distanceValue"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/degreeCounter" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/degrees"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/gyroValues" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/degreeCounter"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/degrees_text" android:id="@+id/degreesM" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/gyroValues"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/degreeCounterM" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/degreesM"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="total_acc_magneto:" android:id="@+id/acc_magneto" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/degreeCounterM"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
 
     <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/acc_magneto_count" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/acc_magneto"
-        android:textSize="13pt"/>
+        android:textSize="12pt"/>
+
+   <!-- <TextView android:text="@string/audio_text" android:id="@+id/audioLT" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_below="@id/acc_magneto_count"
+        android:textSize="12pt"/>
+
+    <TextView android:text="0" android:id="@+id/audio_level" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_below="@id/audioLT"
+        android:textSize="12pt"/>-->
 
     <TextView
         android:id="@+id/error_indicator"

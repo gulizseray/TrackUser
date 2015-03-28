@@ -5,6 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaRecorder;
 import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -48,6 +49,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     float cachedAcceleration = 0;
     float [] cachedGyroscope = new float[3];
     float [] cachedMagnetometer= new float[3];
+    double cachedAudioLevel = 0;
 
     float[] magDifference = new float[3];
 
@@ -70,6 +72,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private TextView stepsTextView = null;
     private TextView distanceTextView = null;
     private TextView degreesTextView = null;
+
+    //private TextView audioTextView = null;
 
     private TextView gyroMeasurementTextView = null;
     private TextView magMeasurementTextView = null;
@@ -104,6 +108,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //initialize light sensor
         senLight = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         mSensorManager.registerListener(this, senLight, SensorManager.SENSOR_DELAY_FASTEST);
+
+        //initialize microphone
+        recordAudioInBackGround.start();
     }
     public boolean isAllZeros(float [] a){
         for(int i=0;i<a.length;i++)
@@ -254,6 +261,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         magMeasurementTextView = (TextView) findViewById(R.id.degreeCounterM);
         errorDetectionTextView = (TextView) findViewById(R.id.error_indicator);
         accMagTextView = (TextView) findViewById(R.id.acc_magneto_count);
+        //audioTextView = (TextView) findViewById(R.id.audio_level);
 
         initializeSensors();
         initializeFile();
@@ -282,4 +290,49 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         return super.onOptionsItemSelected(item);
     }
+
+    //Audio recording
+    private MediaRecorder mRecorder = null;
+
+    public void startRecordingAudio(){
+        mRecorder = new MediaRecorder();
+        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        mRecorder.setOutputFile("/dev/null");
+        try {
+            mRecorder.prepare();
+        } catch (IllegalStateException e) {
+            // TODO Auto-generated catch block
+            //e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            //e.printStackTrace();
+        }
+        mRecorder.start();
+    }
+
+    public double getAudioAmplitude() {
+        if (mRecorder != null)
+            return  mRecorder.getMaxAmplitude();
+        else
+            return 0;
+
+    }
+
+    Thread recordAudioInBackGround= new Thread(new Runnable() {
+        @Override
+        public void run() {
+        //Your recording portion of the code goes here.
+            startRecordingAudio();
+            while(true){
+                cachedAudioLevel = getAudioAmplitude();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    });
 }

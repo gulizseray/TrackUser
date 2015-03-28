@@ -9,6 +9,7 @@
     <string name="total_degrees_of_rotation">0</string>
     <string name="distance_value">0</string>
     <string name="distance_text">Walked distance</string>
+    <string name="audio_text">Audio Level:</string>
 
 </resources>
 
