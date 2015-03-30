@@ -254,19 +254,34 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         writeAllReadingsToFile(currentTime - startTime);
     }
 
+    public String constructWiFiData(){
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(numDiscoveredWiFiDevices + ",");
+
+        //Print RSSIs for discovered APs
+        if(wifiList != null){
+            for(int i=0;i<wifiList.size();i++){
+                stringBuilder.append(wifiList.get(i).level + ",");
+            }
+        }
+
+        return stringBuilder.toString();
+    }
+
     public void writeAllReadingsToFile(long timestamp){
         String acc = cachedAccelerometer[0] + "," + cachedAccelerometer[1] + "," + cachedAccelerometer[2] + ",";
         String gyr = cachedGyroscope[0] + "," + cachedGyroscope[1] + "," + cachedGyroscope[2] + ",";
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + cachedAudioLevel + "," + numDiscoveredWiFiDevices + "\n";
+        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData()  + cachedAudioLevel +  "\n";
         try {
             readingsOutputStream.write( all.getBytes() );
             readingsOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     @Override
