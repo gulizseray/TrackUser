@@ -173,10 +173,17 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     if(angleMagInitial == null)
         angleMagInitial = new Float(angleNew);
 
-    angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
-
+        if(angleMag < - 0.5 * Math.PI && angleNew > 0.5 * Math.PI){
+            angleMag = (float) ((FILTER_COEFFICIENT) * (angleMag + (2.0* Math.PI)) + (1- FILTER_COEFFICIENT) * angleNew);
+            angleMag -= (angleMag > Math.PI) ? 2.0 * Math.PI : 0;
+        } else if(angleMag > 0.5 * Math.PI && angleNew < 0.5 * Math.PI){
+            angleMag = (float) ((FILTER_COEFFICIENT) * angleMag  + (1- FILTER_COEFFICIENT) * (angleNew+ (2.0* Math.PI)));
+            angleMag -= (angleMag > Math.PI) ? 2.0 * Math.PI : 0;
+        } else {
+            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
+        }
     //update display of the angle
-    magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
+    magMeasurementTextView.setText(String.format("Calibrated: %.3f %n Uncalibrated: %.3f", Math.toDegrees(angleMag - angleMagInitial),  Math.toDegrees(angleMag)));
 
     }
 
@@ -195,22 +202,26 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
 
-    if(angleMagToInitial < -0 && fusedAngle > 0){
-        fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * (angleMagToInitial + (float) (2 * Math.PI));
+    if(angleMag < 0 && fusedAngle > 0){
+        fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * (angleMag + (float) (2 * Math.PI));
         fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
-    }else if (angleMagToInitial > 0 && fusedAngle < -0) {
-        fusedAngle =   FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1-FILTER_COEFFICIENT) * angleMagToInitial;
+    }else if (angleMag > 0 && fusedAngle < -0) {
+        fusedAngle =   FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1-FILTER_COEFFICIENT) * angleMag;
         fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
     }
     else{
-        fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * angleMagToInitial;
+        fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * angleMag;//angleMagToInitial;
     }
 
 //    fusedAngle += 2 * Math.PI;
 //    fusedAngle %= 2 * Math.PI;
 
 
-    float angleToDisplay = (float) (fusedAngle) % ((float) (2 * Math.PI)) * -1;
+    float angleToDisplay = (float) (fusedAngle - angleMagInitial); // % ((float) (2 * Math.PI)) * -1;
+        if(angleToDisplay <  - Math.PI)
+            angleToDisplay += 2.0 * Math.PI;
+        else if(angleToDisplay > Math.PI)
+            angleToDisplay -= 2.0 * Math.PI;
 
     degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", totalTurn));
     gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));

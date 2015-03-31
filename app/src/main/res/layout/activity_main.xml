@@ -65,5 +65,15 @@
         android:layout_toRightOf="@+id/steps"
         android:layout_toEndOf="@+id/steps"
         android:background="#ff19ff14" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reset"
+        android:id="@+id/resetButton"
+        android:layout_alignBottom="@+id/distanceText"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:onClick="resetDegrees"/>
 </RelativeLayout>
 
