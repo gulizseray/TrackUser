@@ -192,7 +192,18 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     angleGyro %= 2 * Math.PI;
 
     float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
-    fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * angleMagToInitial;
+
+    if(angleMag < -0.5 && angleGyro > 0){
+        fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * (angleMagToInitial + (float) (2 * Math.PI));
+        fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
+    }else if (angleMag > 0 && angleGyro < -0.5) {
+        fusedAngle =   FILTER_COEFFICIENT * (float) (angleGyro + 2 * Math.PI) + (1-FILTER_COEFFICIENT) * angleMagToInitial;
+        fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
+    }
+    else{
+        fusedAngle =  FILTER_COEFFICIENT * angleGyro + (1-FILTER_COEFFICIENT) * angleMagToInitial;
+    }
+
 
     degreesTextView.setText(String.format("%.2f", Math.toDegrees(fusedAngle)) + ", " + String.format("%.2f", totalTurn));
     gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
