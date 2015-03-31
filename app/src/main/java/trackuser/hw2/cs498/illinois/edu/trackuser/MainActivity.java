@@ -195,10 +195,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
 
-    if(angleMagToInitial < -0 && fusedAngle > 0){
+    if(angleMagToInitial < -0.5 * Math.PI && fusedAngle > 0){
         fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * (angleMagToInitial + (float) (2 * Math.PI));
         fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
-    }else if (angleMagToInitial > 0 && fusedAngle < -0) {
+    }else if (angleMagToInitial > 0 && fusedAngle < -0.5 * Math.PI) {
         fusedAngle =   FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1-FILTER_COEFFICIENT) * angleMagToInitial;
         fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
     }
