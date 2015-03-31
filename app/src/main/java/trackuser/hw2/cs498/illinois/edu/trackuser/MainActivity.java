@@ -219,7 +219,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 //    fusedAngle %= 2 * Math.PI;
 
 
-        float angleToDisplay = (float) (fusedAngle);
+        float angleToDisplay = (float) (fusedAngle - angleMagInitial);
+        if (angleToDisplay < - Math.PI)
+            angleToDisplay += 2.0 * Math.PI;
+        else if (angleToDisplay > Math.PI)
+            angleToDisplay -= 2.0  * Math.PI;
 
         degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", totalTurn));
         gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
