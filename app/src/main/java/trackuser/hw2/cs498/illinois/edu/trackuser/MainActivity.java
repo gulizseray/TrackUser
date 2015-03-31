@@ -61,10 +61,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private String sensorFileName = "sensorReadings.csv";
 
     // Cached values for the sensor readings
-    float [] cachedAccelerometer = new float[3];
+    float[] cachedAccelerometer = new float[3];
     float cachedAcceleration = 0;
-    float [] cachedGyroscope = new float[3];
-    float [] cachedMagnetometer= new float[3];
+    float[] cachedGyroscope = new float[3];
+    float[] cachedMagnetometer = new float[3];
     double cachedAudioLevel = 0;
     float cachedLightSensor = 0;
 
@@ -93,7 +93,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private TextView accMagTextView = null;
 
 
-    public void initializeFile(){
+    public void initializeFile() {
         try {
             readingsFile = new File(Environment.getExternalStorageDirectory(), sensorFileName);
             readingsOutputStream = new FileOutputStream(readingsFile);
@@ -102,12 +102,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
-    public void initializeSensors(){
+    public void initializeSensors() {
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
         //initialize accelerometer
         senAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
 
         //initialize gyroscope
         senGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -127,23 +127,24 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //initialize microphone
         recordAudioInBackGround.start();
     }
-    public boolean isAllZeros(float [] a){
-        for(int i=0;i<a.length;i++)
-            if(a[i] != 0)
+
+    public boolean isAllZeros(float[] a) {
+        for (int i = 0; i < a.length; i++)
+            if (a[i] != 0)
                 return false;
         return true;
 
     }
 
-    public float[] lowPassFilter( float[] input, float[] output ) {
-        if ( output == null ) return input;
-        for ( int i=0; i<input.length; i++ ) {
+    public float[] lowPassFilter(float[] input, float[] output) {
+        if (output == null) return input;
+        for (int i = 0; i < input.length; i++) {
             output[i] = output[i] + ALPHA * (input[i] - output[i]);
         }
         return output;
     }
 
-    public void calculateAccMagOrientation(){
+    public void calculateAccMagOrientation() {
 
         float R[] = new float[9];
         float I[] = new float[9];
@@ -154,9 +155,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             float orientation[] = new float[3];
             SensorManager.getOrientation(R, orientation);
 
-            float azimut = orientation[0] * (-1) ; //needs to be multiplied by -1 to get correct result?
+            float azimut = orientation[0] * (-1); //needs to be multiplied by -1 to get correct result?
 
-            if(angleMagInitial == null)
+            if (angleMagInitial == null)
                 angleMagInitial = new Float(azimut);
 
             angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * azimut;
@@ -165,69 +166,75 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
-    public void calculateMagOrientation(){
+    public void calculateMagOrientation() {
 
-    //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
-    float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
+        //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
+        float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
 
-    if(angleMagInitial == null)
-        angleMagInitial = new Float(angleNew);
+        if (angleMagInitial == null)
+            angleMagInitial = new Float(angleNew);
 
-    angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
+        if (angleNew < -0.5 * Math.PI && angleMag > 0.5 * Math.PI) {
+            angleMag = FILTER_COEFFICIENT * (angleMag) + (1 - FILTER_COEFFICIENT) * (angleNew + (float) (2 * Math.PI));
+            angleMag -= (angleMag > Math.PI) ? 2.0 * Math.PI : 0;
+        } else if (angleNew > 0.5 * Math.PI && angleMag < -0.5 * Math.PI) {
+            angleMag = FILTER_COEFFICIENT * (float) (angleMag + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleNew;
+            angleMag -= (angleMag > Math.PI) ? 2.0 * Math.PI : 0;
+        } else {
+            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
+        }
 
-    //update display of the angle
-    magMeasurementTextView.setText(String.format("%.3f", Math.toDegrees(angleMag - angleMagInitial)));
+
+        //update display of the angle
+        magMeasurementTextView.setText(String.format("Cal: %.3f %n Uncal: %.3f", Math.toDegrees(angleMag - angleMagInitial), Math.toDegrees(angleMag)));
 
     }
 
-    public void calculateGyroOrientation(long deltaT){
+    public void calculateGyroOrientation(long deltaT) {
 
-    //perform numeric integration
-    float addedTurn = cachedGyroscope[2] * deltaT / 1000;
+        //perform numeric integration
+        float addedTurn = cachedGyroscope[2] * deltaT / 1000;
 //
-    //add absolute value to total turn
-    totalTurn += Math.abs(addedTurn);
+        //add absolute value to total turn
+        totalTurn += Math.abs(addedTurn);
 
-    //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
-    //angleGyro += addedTurn;
-    angleGyro = addedTurn;
+        //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
+        //angleGyro += addedTurn;
+        angleGyro = addedTurn;
 
 
-    float angleMagToInitial = (angleMag - ( (angleMagInitial == null) ? 0 : angleMagInitial));
+        float angleMagToInitial = (angleMag - ((angleMagInitial == null) ? 0 : angleMagInitial));
 
-    if(angleMagToInitial < -0 && fusedAngle > 0){
-        fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * (angleMagToInitial + (float) (2 * Math.PI));
-        fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
-    }else if (angleMagToInitial > 0 && fusedAngle < -0) {
-        fusedAngle =   FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1-FILTER_COEFFICIENT) * angleMagToInitial;
-        fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
-    }
-    else{
-        fusedAngle =  FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1-FILTER_COEFFICIENT) * angleMagToInitial;
-    }
+        if (angleMag < -0 && fusedAngle > 0) {
+            fusedAngle = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * (angleMag + (float) (2 * Math.PI));
+            fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
+        } else if (angleMag > 0 && fusedAngle < -0) {
+            fusedAngle = FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleMag;
+            fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
+        } else {
+            fusedAngle = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * angleMag;
+        }
 
 //    fusedAngle += 2 * Math.PI;
 //    fusedAngle %= 2 * Math.PI;
 
 
-    float angleToDisplay = (float) (fusedAngle) % ((float) (2 * Math.PI)) * -1;
+        float angleToDisplay = (float) (fusedAngle);
 
-    degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", totalTurn));
-    gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
+        degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", totalTurn));
+        gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
     }
 
-    public void countSteps(){
+    public void countSteps() {
         long currTime = System.currentTimeMillis();
 
-        if(cachedAccelerometer[2] > 11.4)
-        {
+        if (cachedAccelerometer[2] > 11.4) {
             // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
-            if (currTime - lastStepCountTime > 300)
-            {
+            if (currTime - lastStepCountTime > 300) {
                 numSteps++;
                 lastStepCountTime = currTime;
                 stepsTextView.setText(String.valueOf(numSteps));
-                distanceTextView.setText(String.format("%.1f", numSteps*0.9) + "m");
+                distanceTextView.setText(String.format("%.1f", numSteps * 0.9) + "m");
             }
         }
     }
@@ -242,8 +249,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
             countSteps();
             //calculateAccMagOrientation();
-        }
-        else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE){
+        } else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE) {
 //            long currentTime = System.currentTimeMillis();
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
             long deltaT = (currentTime - lastGyroTime);
@@ -253,18 +259,16 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             //change lastGyroTime to current time
             lastGyroTime = currentTime;
 
-        }
-        else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
+        } else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
             System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
 
-            float deltaT= System.currentTimeMillis() - lastMagnetTime;
+            float deltaT = System.currentTimeMillis() - lastMagnetTime;
 
             calculateMagOrientation();
 
             //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
             lastMagnetTime = System.currentTimeMillis();
-        }
-        else if (mySensor.getType() == Sensor.TYPE_LIGHT){
+        } else if (mySensor.getType() == Sensor.TYPE_LIGHT) {
 
             cachedLightSensor = sensorEvent.values[0];
         }
@@ -272,13 +276,13 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         writeAllReadingsToFile(currentTime - startTime);
     }
 
-    public String constructWiFiData(){
+    public String constructWiFiData() {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(numDiscoveredWiFiDevices + ",");
 
         //Print RSSIs for discovered APs
-        if(wifiList != null){
-            for(int i=0;i<wifiList.size();i++){
+        if (wifiList != null) {
+            for (int i = 0; i < wifiList.size(); i++) {
                 stringBuilder.append(wifiList.get(i).level + ",");
             }
         }
@@ -286,15 +290,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         return stringBuilder.toString();
     }
 
-    public void writeAllReadingsToFile(long timestamp){
+    public void writeAllReadingsToFile(long timestamp) {
         String acc = cachedAccelerometer[0] + "," + cachedAccelerometer[1] + "," + cachedAccelerometer[2] + ",";
         String gyr = cachedGyroscope[0] + "," + cachedGyroscope[1] + "," + cachedGyroscope[2] + ",";
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData()  + cachedAudioLevel +  "\n";
+        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
         try {
-            readingsOutputStream.write( all.getBytes() );
+            readingsOutputStream.write(all.getBytes());
             readingsOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -367,7 +371,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     //Audio level recording
     private MediaRecorder mRecorder = null;
 
-    public void startRecordingAudio(){
+    public void startRecordingAudio() {
         mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
@@ -387,18 +391,18 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     public double getAudioAmplitude() {
         if (mRecorder != null)
-            return  mRecorder.getMaxAmplitude();
+            return mRecorder.getMaxAmplitude();
         else
             return 0;
 
     }
 
-    Thread recordAudioInBackGround= new Thread(new Runnable() {
+    Thread recordAudioInBackGround = new Thread(new Runnable() {
         @Override
         public void run() {
             startRecordingAudio();
 
-            while(true){
+            while (true) {
                 cachedAudioLevel = getAudioAmplitude();
                 try {
                     Thread.sleep(1000);
@@ -410,10 +414,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     });
 
     //Wi-Fi Scanning
-    public void initializeWifi(){
+    public void initializeWifi() {
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        if (wifiManager.isWifiEnabled() == false)
-        {
+        if (wifiManager.isWifiEnabled() == false) {
             Toast.makeText(getApplicationContext(), "Wi-Fi is disabled..Enabling it now.", Toast.LENGTH_LONG).show();
             wifiManager.setWifiEnabled(true);
         }
@@ -427,9 +430,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         timer.scheduleAtFixedRate(wiFiScanTask, 0, WIFI_SCAN_PERIOD * 1000);
     }
 
-    class WiFiScanTask extends TimerTask{
+    class WiFiScanTask extends TimerTask {
         @Override
-        public void run(){
+        public void run() {
             wifiManager.startScan();
         }
     }
@@ -442,7 +445,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             StringBuilder sb = new StringBuilder();
             wifiList = wifiManager.getScanResults();
-            sb.append("\nNumber Of Wi-Fi connections :" + wifiList.size()+"\n\n");
+            sb.append("\nNumber Of Wi-Fi connections :" + wifiList.size() + "\n\n");
             numDiscoveredWiFiDevices = wifiList.size();
 
 //            for(int i = 0; i < wifiList.size(); i++){
