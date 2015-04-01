@@ -205,10 +205,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         float angleMagToInitial = (angleMag - ((angleMagInitial == null) ? 0 : angleMagInitial));
 
-        if (angleMag < -0 && fusedAngle > 0) {
+        if (angleMag < -0.5 * Math.PI && fusedAngle > 0.5 * Math.PI) {
             fusedAngle = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * (angleMag + (float) (2 * Math.PI));
             fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
-        } else if (angleMag > 0 && fusedAngle < -0) {
+        } else if (angleMag > 0.5 * Math.PI && fusedAngle < -0.5 * Math.PI) {
             fusedAngle = FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleMag;
             fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
         } else {
@@ -219,7 +219,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 //    fusedAngle %= 2 * Math.PI;
 
 
-        float angleToDisplay = (float) (fusedAngle - angleMagInitial);
+        float angleToDisplay = (float) (fusedAngle - ((angleMagInitial == null) ? 0 : angleMagInitial));
         if (angleToDisplay < - Math.PI)
             angleToDisplay += 2.0 * Math.PI;
         else if (angleToDisplay > Math.PI)
