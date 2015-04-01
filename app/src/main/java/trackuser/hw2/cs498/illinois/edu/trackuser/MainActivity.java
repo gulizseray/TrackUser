@@ -49,6 +49,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     List<ScanResult> wifiList;
     private int numDiscoveredWiFiDevices = 0;
     public static final int WIFI_SCAN_PERIOD = 5; //in seconds
+    public static final int AUDIO_SCAN_PERIOD = 1; //in seconds
 
     private long startTime = System.currentTimeMillis();
     public static final float ALPHA = (float) 0.7;
@@ -184,19 +185,16 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
         }
 
-
         //update display of the angle
         magMeasurementTextView.setText(String.format("Cal: %.3f %n Uncal: %.3f", Math.toDegrees(angleMag - angleMagInitial), Math.toDegrees(angleMag)));
 
     }
 
     public void calculateGyroOrientation(long deltaT) {
+        float fusedAngleNew = 0;
 
         //perform numeric integration
         float addedTurn = cachedGyroscope[2] * deltaT / 1000;
-//
-        //add absolute value to total turn
-        totalTurn += Math.abs(addedTurn);
 
         //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
         //angleGyro += addedTurn;
@@ -206,14 +204,19 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         float angleMagToInitial = (angleMag - ((angleMagInitial == null) ? 0 : angleMagInitial));
 
         if (angleMag < -0.5 * Math.PI && fusedAngle > 0.5 * Math.PI) {
-            fusedAngle = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * (angleMag + (float) (2 * Math.PI));
-            fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
+            fusedAngleNew = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * (angleMag + (float) (2 * Math.PI));
+            fusedAngleNew -= (fusedAngleNew > Math.PI) ? 2.0 * Math.PI : 0;
         } else if (angleMag > 0.5 * Math.PI && fusedAngle < -0.5 * Math.PI) {
-            fusedAngle = FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleMag;
-            fusedAngle -= (fusedAngle > Math.PI) ? 2.0 * Math.PI : 0;
+            fusedAngleNew = FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleMag;
+            fusedAngleNew -= (fusedAngleNew > Math.PI) ? 2.0 * Math.PI : 0;
         } else {
-            fusedAngle = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * angleMag;
+            fusedAngleNew = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * angleMag;
         }
+
+
+        //add absolute value to total turn
+        totalTurn += Math.abs(Math.abs(fusedAngleNew) - Math.abs(fusedAngle));
+        fusedAngle = fusedAngleNew;
 
 //    fusedAngle += 2 * Math.PI;
 //    fusedAngle %= 2 * Math.PI;
@@ -225,7 +228,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         else if (angleToDisplay > Math.PI)
             angleToDisplay -= 2.0  * Math.PI;
 
-        degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", totalTurn));
+        degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", Math.toDegrees(totalTurn)));
         gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
     }
 
@@ -287,7 +290,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //Print RSSIs for discovered APs
         if (wifiList != null) {
             for (int i = 0; i < wifiList.size(); i++) {
-                stringBuilder.append(wifiList.get(i).level + ",");
+                stringBuilder.append(wifiList.get(i).SSID + "," + wifiList.get(i).level + ",");
             }
         }
 
@@ -300,7 +303,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
+        String all = timestamp + "," + numSteps + "," + fusedAngle + "," + angleMag + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
         try {
             readingsOutputStream.write(all.getBytes());
             readingsOutputStream.flush();
@@ -409,7 +412,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             while (true) {
                 cachedAudioLevel = getAudioAmplitude();
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(AUDIO_SCAN_PERIOD * 1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
