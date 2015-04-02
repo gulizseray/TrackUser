@@ -71,16 +71,16 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     float cachedLightSensor = 0;
 
     // Unknowns
-    private float oldFusedAngle = 0;
     //All angles in radians
     private float angleGyro = 0;
     float angleMag = 0;
     Float angleMagInitial = null;
     public float fusedAngle = 0;
 
-
-    //Unknowns for dead reckoning
+    // Unknowns for counting steps
     private int numSteps = 0;
+
+    // Unknowns for dead reckoning
     private float totalTurn = 0;
     public float angleToInitial = 0;
     public float accumAngle = 0;
@@ -92,6 +92,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private long lastMagnetTime = startTime;
     private long lastAccMagTime = startTime;
     private long lastTotalTurnUpdateTime = startTime;
+
     // TextViews
     private TextView stepsTextView = null;
     private TextView distanceTextView = null;
@@ -263,7 +264,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         long currentTime = System.currentTimeMillis();
 
-
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
             countSteps();
@@ -271,14 +271,13 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         } else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE) {
             long deltaT = currentTime - lastGyroTime;
 
-            // extreme point
+            // If there is a sign difference, then this is an extreme point
             if(Math.signum(cachedGyroscope[2]) == Math.signum(sensorEvent.values[2])){
                 accumAngle += sensorEvent.values[2] * deltaT / 1000;
             }else{
                 if(Math.abs(accumAngle) > TURN_THRESHOLD){
                     totalTurn += Math.abs(accumAngle);
                     angleToInitial += accumAngle;
-//                    angleToInitial %= Math.PI * 2;
                 }
                 Log.v("AccumAngle", String.valueOf(accumAngle));
                 accumAngle = 0;
@@ -287,9 +286,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             currentDegreesTextView.setText(String.format("%.1f", Math.toDegrees(angleToInitial + accumAngle) % 360));
             totalDegreesTextView.setText(String.format("%.1f", Math.toDegrees(totalTurn + Math.abs(accumAngle))));
 
-            float addedTurn = cachedGyroscope[2] * deltaT / 1000;
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
-
 
             //change lastGyroTime to current time
             lastGyroTime = currentTime;
@@ -298,8 +295,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
 
             float deltaT = System.currentTimeMillis() - lastMagnetTime;
-
-            //calculateMagOrientation();
 
             //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
             lastMagnetTime = System.currentTimeMillis();
@@ -404,31 +399,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         return super.onOptionsItemSelected(item);
     }
-
-
-    float newAngle = 0, oldAngle = 0;
-
-    Thread calculateTotalTurn = new Thread(new Runnable() {
-        @Override
-        public void run() {
-
-            while (true) {
-                oldAngle = newAngle;
-                newAngle = fusedAngle;
-                try {
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            totalDegreesTextView.setText(String.format("%.2f", newAngle - oldAngle));
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    });
 
     //Audio level recording
     private MediaRecorder mRecorder = null;
