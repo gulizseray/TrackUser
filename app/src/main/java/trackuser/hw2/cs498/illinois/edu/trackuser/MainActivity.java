@@ -49,7 +49,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     List<ScanResult> wifiList;
     private int numDiscoveredWiFiDevices = 0;
     public static final int WIFI_SCAN_PERIOD = 5; //in seconds
-    public static final int AUDIO_SCAN_PERIOD = 1; //in seconds
+    public static final int AUDIO_SCAN_PERIOD = 10; //in mili seconds
 
     private long startTime = System.currentTimeMillis();
     public static final float ALPHA = (float) 0.7;
@@ -468,7 +468,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             while (true) {
                 cachedAudioLevel = getAudioAmplitude();
                 try {
-                    Thread.sleep(AUDIO_SCAN_PERIOD * 1000);
+                    Thread.sleep(AUDIO_SCAN_PERIOD);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
