@@ -6,7 +6,9 @@
     <string name="steps_text">Number of steps: </string>
     <string name="number_of_steps">0</string>
     <string name="degrees_text">Total degree of rotation: </string>
+    <string name="current_degrees_text">Current degree of rotation: </string>
     <string name="total_degrees_of_rotation">0</string>
+    <string name="current_degrees_of_rotation">0</string>
     <string name="distance_value">0</string>
     <string name="distance_text">Walked distance</string>
     <string name="audio_text">Audio Level:</string>

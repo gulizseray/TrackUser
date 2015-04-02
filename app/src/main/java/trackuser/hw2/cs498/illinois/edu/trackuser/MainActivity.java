@@ -69,9 +69,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     double cachedAudioLevel = 0;
     float cachedLightSensor = 0;
 
+    private boolean isFusedAngleUpdated = false;
     // Unknowns
     private int numSteps = 0;
     private float totalTurn = 0;
+    private float oldFusedAngle = 0;
     //All angles in radians
     private float angleGyro = 0;
     float angleMag = 0;
@@ -83,11 +85,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private long lastGyroTime = startTime;
     private long lastMagnetTime = startTime;
     private long lastAccMagTime = startTime;
-
+    private long lastTotalTurnUpdateTime = startTime;
     // TextViews
     private TextView stepsTextView = null;
     private TextView distanceTextView = null;
-    private TextView degreesTextView = null;
+    private TextView currentDegreesTextView = null;
+    private TextView totalDegreesTextView = null;
     private TextView gyroMeasurementTextView = null;
     private TextView magMeasurementTextView = null;
     private TextView errorDetectionTextView = null;
@@ -127,6 +130,9 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         //initialize microphone
         recordAudioInBackGround.start();
+
+        // start writing total turn angle
+        //calculateTotalTurn.start();
     }
 
     public boolean isAllZeros(float[] a) {
@@ -215,7 +221,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
 
         //add absolute value to total turn
-        totalTurn += Math.abs(Math.abs(fusedAngleNew) - Math.abs(fusedAngle));
+        //if( deltaT > 7)
+        float diff = Math.abs(Math.abs(fusedAngleNew) - Math.abs(fusedAngle));
+        if( Math.abs(cachedGyroscope[2]) > 0.03 && System.currentTimeMillis() - startTime > 5000 )
+            totalTurn += diff;
+//
         fusedAngle = fusedAngleNew;
 
 //    fusedAngle += 2 * Math.PI;
@@ -228,7 +238,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         else if (angleToDisplay > Math.PI)
             angleToDisplay -= 2.0  * Math.PI;
 
-        degreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", Math.toDegrees(totalTurn)));
+
+//        if(angleMagInitial != null && !isFusedAngleUpdated){
+//            isFusedAngleUpdated = true;
+//            oldFusedAngle = fusedAngle;
+//            lastTotalTurnUpdateTime = System.currentTimeMillis();
+//        }
+//        currentDegreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", Math.toDegrees(totalTurn)));
+        currentDegreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)));
+        totalDegreesTextView.setText(String.format("%.2f", Math.toDegrees(totalTurn)));
         gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
     }
 
@@ -251,6 +269,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         Sensor mySensor = sensorEvent.sensor;
 
         long currentTime = System.currentTimeMillis();
+
 
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
@@ -281,16 +300,27 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
 
         writeAllReadingsToFile(currentTime - startTime);
+
+//        if(isFusedAngleUpdated && (currentTime - lastTotalTurnUpdateTime) > 2000){
+//            totalTurn += Math.abs(Math.abs(oldFusedAngle) - Math.abs(fusedAngle));
+//            oldFusedAngle = fusedAngle;
+//
+//            float angleToDisplay;
+//
+//            lastTotalTurnUpdateTime = currentTime;
+//
+//        }
+
     }
 
     public String constructWiFiData() {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(numDiscoveredWiFiDevices + ",");
 
-        //Print RSSIs for discovered APs
+        //Print MAC address and RSSIs for discovered APs
         if (wifiList != null) {
             for (int i = 0; i < wifiList.size(); i++) {
-                stringBuilder.append(wifiList.get(i).SSID + "," + wifiList.get(i).level + ",");
+                stringBuilder.append(wifiList.get(i).BSSID + "," + wifiList.get(i).level + ",");
             }
         }
 
@@ -340,7 +370,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         stepsTextView = (TextView) findViewById(R.id.stepCounter);
         distanceTextView = (TextView) findViewById(R.id.distanceValue);
-        degreesTextView = (TextView) findViewById(R.id.degreeCounter);
+        totalDegreesTextView = (TextView) findViewById(R.id.degreeCounter);
+        currentDegreesTextView = (TextView) findViewById(R.id.currentDegreeCounter);
         gyroMeasurementTextView = (TextView) findViewById(R.id.gyroValues);
         magMeasurementTextView = (TextView) findViewById(R.id.degreeCounterM);
         errorDetectionTextView = (TextView) findViewById(R.id.error_indicator);
@@ -374,6 +405,31 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         return super.onOptionsItemSelected(item);
     }
+
+
+    float newAngle = 0, oldAngle = 0;
+
+    Thread calculateTotalTurn = new Thread(new Runnable() {
+        @Override
+        public void run() {
+
+            while (true) {
+                oldAngle = newAngle;
+                newAngle = fusedAngle;
+                try {
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            totalDegreesTextView.setText(String.format("%.2f", newAngle - oldAngle));
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    });
 
     //Audio level recording
     private MediaRecorder mRecorder = null;
