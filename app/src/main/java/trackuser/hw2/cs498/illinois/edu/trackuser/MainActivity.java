@@ -14,6 +14,7 @@ import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -69,16 +70,21 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     double cachedAudioLevel = 0;
     float cachedLightSensor = 0;
 
-    private boolean isFusedAngleUpdated = false;
     // Unknowns
-    private int numSteps = 0;
-    private float totalTurn = 0;
     private float oldFusedAngle = 0;
     //All angles in radians
     private float angleGyro = 0;
     float angleMag = 0;
     Float angleMagInitial = null;
     public float fusedAngle = 0;
+
+
+    //Unknowns for dead reckoning
+    private int numSteps = 0;
+    private float totalTurn = 0;
+    public float angleToInitial = 0;
+    public float accumAngle = 0;
+    private static final float TURN_THRESHOLD = 0.1745f; // 10 degrees in radians
 
     // Previous update times for unknowns
     private long lastStepCountTime = startTime;
@@ -196,7 +202,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     }
 
-    public void calculateGyroOrientation(long deltaT) {
+    public void calculateGyroOrientationWithMagneto(long deltaT) {
         float fusedAngleNew = 0;
 
         //perform numeric integration
@@ -219,17 +225,11 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             fusedAngleNew = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * angleMag;
         }
 
-
-        //add absolute value to total turn
-        //if( deltaT > 7)
         float diff = Math.abs(Math.abs(fusedAngleNew) - Math.abs(fusedAngle));
         if( Math.abs(cachedGyroscope[2]) > 0.03 && System.currentTimeMillis() - startTime > 5000 )
             totalTurn += diff;
-//
-        fusedAngle = fusedAngleNew;
 
-//    fusedAngle += 2 * Math.PI;
-//    fusedAngle %= 2 * Math.PI;
+        fusedAngle = fusedAngleNew;
 
 
         float angleToDisplay = (float) (fusedAngle - ((angleMagInitial == null) ? 0 : angleMagInitial));
@@ -238,13 +238,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         else if (angleToDisplay > Math.PI)
             angleToDisplay -= 2.0  * Math.PI;
 
-
-//        if(angleMagInitial != null && !isFusedAngleUpdated){
-//            isFusedAngleUpdated = true;
-//            oldFusedAngle = fusedAngle;
-//            lastTotalTurnUpdateTime = System.currentTimeMillis();
-//        }
-//        currentDegreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)) + ", " + String.format("%.2f", Math.toDegrees(totalTurn)));
         currentDegreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)));
         totalDegreesTextView.setText(String.format("%.2f", Math.toDegrees(totalTurn)));
         gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
@@ -274,13 +267,29 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             cachedAccelerometer = lowPassFilter(sensorEvent.values.clone(), cachedAccelerometer);
             countSteps();
-            //calculateAccMagOrientation();
-        } else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE) {
-//            long currentTime = System.currentTimeMillis();
-            System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
-            long deltaT = (currentTime - lastGyroTime);
 
-            calculateGyroOrientation(deltaT);
+        } else if (mySensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            long deltaT = currentTime - lastGyroTime;
+
+            // extreme point
+            if(Math.signum(cachedGyroscope[2]) == Math.signum(sensorEvent.values[2])){
+                accumAngle += sensorEvent.values[2] * deltaT / 1000;
+            }else{
+                if(Math.abs(accumAngle) > TURN_THRESHOLD){
+                    totalTurn += Math.abs(accumAngle);
+                    angleToInitial += accumAngle;
+//                    angleToInitial %= Math.PI * 2;
+                }
+                Log.v("AccumAngle", String.valueOf(accumAngle));
+                accumAngle = 0;
+            }
+
+            currentDegreesTextView.setText(String.format("%.1f", Math.toDegrees(angleToInitial + accumAngle) % 360));
+            totalDegreesTextView.setText(String.format("%.1f", Math.toDegrees(totalTurn + Math.abs(accumAngle))));
+
+            float addedTurn = cachedGyroscope[2] * deltaT / 1000;
+            System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
+
 
             //change lastGyroTime to current time
             lastGyroTime = currentTime;
@@ -290,7 +299,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
             float deltaT = System.currentTimeMillis() - lastMagnetTime;
 
-            calculateMagOrientation();
+            //calculateMagOrientation();
 
             //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
             lastMagnetTime = System.currentTimeMillis();
@@ -300,16 +309,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
 
         writeAllReadingsToFile(currentTime - startTime);
-
-//        if(isFusedAngleUpdated && (currentTime - lastTotalTurnUpdateTime) > 2000){
-//            totalTurn += Math.abs(Math.abs(oldFusedAngle) - Math.abs(fusedAngle));
-//            oldFusedAngle = fusedAngle;
-//
-//            float angleToDisplay;
-//
-//            lastTotalTurnUpdateTime = currentTime;
-//
-//        }
 
     }
 
