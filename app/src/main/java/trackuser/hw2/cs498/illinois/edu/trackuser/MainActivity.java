@@ -17,6 +17,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,9 +55,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     public static final int AUDIO_SCAN_PERIOD = 10; //in mili seconds
 
     private long startTime = System.currentTimeMillis();
-    public static final float ALPHA = (float) 0.7;
-    public static final float FILTER_COEFFICIENT = 0.98f;
-    private static final float rToD = (float) (180 / Math.PI);
+    public static final float ALPHA = (float) 0.7f;
+    public static final float STEP_LENGTH = 0.9f;
 
     // File related variables
     private File readingsFile;
@@ -64,23 +65,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     // Cached values for the sensor readings
     float[] cachedAccelerometer = new float[3];
-    float cachedAcceleration = 0;
     float[] cachedGyroscope = new float[3];
     float[] cachedMagnetometer = new float[3];
     double cachedAudioLevel = 0;
     float cachedLightSensor = 0;
 
-    // Unknowns
-    //All angles in radians
-    private float angleGyro = 0;
-    float angleMag = 0;
-    Float angleMagInitial = null;
-    public float fusedAngle = 0;
-
     // Unknowns for counting steps
     private int numSteps = 0;
 
-    // Unknowns for dead reckoning
+    // Unknowns for dead reckoning, all angles are in radian
     private float totalTurn = 0;
     public float angleToInitial = 0;
     public float accumAngle = 0;
@@ -90,18 +83,14 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private long lastStepCountTime = startTime;
     private long lastGyroTime = startTime;
     private long lastMagnetTime = startTime;
-    private long lastAccMagTime = startTime;
-    private long lastTotalTurnUpdateTime = startTime;
 
     // TextViews
     private TextView stepsTextView = null;
     private TextView distanceTextView = null;
     private TextView currentDegreesTextView = null;
     private TextView totalDegreesTextView = null;
-    private TextView gyroMeasurementTextView = null;
-    private TextView magMeasurementTextView = null;
-    private TextView errorDetectionTextView = null;
-    private TextView accMagTextView = null;
+
+    private Button resetButton = null;
 
 
     public void initializeFile() {
@@ -142,106 +131,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         //calculateTotalTurn.start();
     }
 
-    public boolean isAllZeros(float[] a) {
-        for (int i = 0; i < a.length; i++)
-            if (a[i] != 0)
-                return false;
-        return true;
-
-    }
-
     public float[] lowPassFilter(float[] input, float[] output) {
         if (output == null) return input;
         for (int i = 0; i < input.length; i++) {
             output[i] = output[i] + ALPHA * (input[i] - output[i]);
         }
         return output;
-    }
-
-    public void calculateAccMagOrientation() {
-
-        float R[] = new float[9];
-        float I[] = new float[9];
-
-        if (SensorManager.getRotationMatrix(R, I, cachedAccelerometer, cachedMagnetometer)) {
-
-            // orientation contains azimut, pitch and roll
-            float orientation[] = new float[3];
-            SensorManager.getOrientation(R, orientation);
-
-            float azimut = orientation[0] * (-1); //needs to be multiplied by -1 to get correct result?
-
-            if (angleMagInitial == null)
-                angleMagInitial = new Float(azimut);
-
-            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * azimut;
-
-            accMagTextView.setText(String.format("%.2f", Math.toDegrees(angleMag - angleMagInitial)));
-        }
-    }
-
-    public void calculateMagOrientation() {
-
-        //calculate the angle between phone and north (assuming phone's orientation is parallel to the ground)
-        float angleNew = (float) Math.atan2((double) cachedMagnetometer[0], cachedMagnetometer[1]);
-
-        if (angleMagInitial == null)
-            angleMagInitial = new Float(angleNew);
-
-        if (angleNew < -0.5 * Math.PI && angleMag > 0.5 * Math.PI) {
-            angleMag = FILTER_COEFFICIENT * (angleMag) + (1 - FILTER_COEFFICIENT) * (angleNew + (float) (2 * Math.PI));
-            angleMag -= (angleMag > Math.PI) ? 2.0 * Math.PI : 0;
-        } else if (angleNew > 0.5 * Math.PI && angleMag < -0.5 * Math.PI) {
-            angleMag = FILTER_COEFFICIENT * (float) (angleMag + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleNew;
-            angleMag -= (angleMag > Math.PI) ? 2.0 * Math.PI : 0;
-        } else {
-            angleMag = (FILTER_COEFFICIENT) * angleMag + (1 - FILTER_COEFFICIENT) * angleNew;
-        }
-
-        //update display of the angle
-        magMeasurementTextView.setText(String.format("Cal: %.3f %n Uncal: %.3f", Math.toDegrees(angleMag - angleMagInitial), Math.toDegrees(angleMag)));
-
-    }
-
-    public void calculateGyroOrientationWithMagneto(long deltaT) {
-        float fusedAngleNew = 0;
-
-        //perform numeric integration
-        float addedTurn = cachedGyroscope[2] * deltaT / 1000;
-
-        //add original value to angle from initial and make sure, it doesn't exceed 360º (361º=1º)
-        //angleGyro += addedTurn;
-        angleGyro = addedTurn;
-
-
-        float angleMagToInitial = (angleMag - ((angleMagInitial == null) ? 0 : angleMagInitial));
-
-        if (angleMag < -0.5 * Math.PI && fusedAngle > 0.5 * Math.PI) {
-            fusedAngleNew = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * (angleMag + (float) (2 * Math.PI));
-            fusedAngleNew -= (fusedAngleNew > Math.PI) ? 2.0 * Math.PI : 0;
-        } else if (angleMag > 0.5 * Math.PI && fusedAngle < -0.5 * Math.PI) {
-            fusedAngleNew = FILTER_COEFFICIENT * (float) (fusedAngle + angleGyro + 2 * Math.PI) + (1 - FILTER_COEFFICIENT) * angleMag;
-            fusedAngleNew -= (fusedAngleNew > Math.PI) ? 2.0 * Math.PI : 0;
-        } else {
-            fusedAngleNew = FILTER_COEFFICIENT * (fusedAngle + angleGyro) + (1 - FILTER_COEFFICIENT) * angleMag;
-        }
-
-        float diff = Math.abs(Math.abs(fusedAngleNew) - Math.abs(fusedAngle));
-        if( Math.abs(cachedGyroscope[2]) > 0.03 && System.currentTimeMillis() - startTime > 5000 )
-            totalTurn += diff;
-
-        fusedAngle = fusedAngleNew;
-
-
-        float angleToDisplay = (float) (fusedAngle - ((angleMagInitial == null) ? 0 : angleMagInitial));
-        if (angleToDisplay < - Math.PI)
-            angleToDisplay += 2.0 * Math.PI;
-        else if (angleToDisplay > Math.PI)
-            angleToDisplay -= 2.0  * Math.PI;
-
-        currentDegreesTextView.setText(String.format("%.2f", Math.toDegrees(angleToDisplay)));
-        totalDegreesTextView.setText(String.format("%.2f", Math.toDegrees(totalTurn)));
-        gyroMeasurementTextView.setText(String.format("%.3f updating %n %d, %.8f", cachedGyroscope[2], deltaT, addedTurn));
     }
 
     public void countSteps() {
@@ -253,7 +148,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 numSteps++;
                 lastStepCountTime = currTime;
                 stepsTextView.setText(String.valueOf(numSteps));
-                distanceTextView.setText(String.format("%.1f", numSteps * 0.9) + "m");
+                distanceTextView.setText(String.format("%.1f", numSteps * STEP_LENGTH) + "m");
             }
         }
     }
@@ -279,7 +174,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                     totalTurn += Math.abs(accumAngle);
                     angleToInitial += accumAngle;
                 }
-                Log.v("AccumAngle", String.valueOf(accumAngle));
                 accumAngle = 0;
             }
 
@@ -327,7 +221,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + numSteps + "," + fusedAngle + "," + angleMag + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
+        String all = timestamp + "," + numSteps + "," + angleToInitial + "," + totalTurn + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
         try {
             readingsOutputStream.write(all.getBytes());
             readingsOutputStream.flush();
@@ -366,11 +260,24 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         distanceTextView = (TextView) findViewById(R.id.distanceValue);
         totalDegreesTextView = (TextView) findViewById(R.id.degreeCounter);
         currentDegreesTextView = (TextView) findViewById(R.id.currentDegreeCounter);
-        gyroMeasurementTextView = (TextView) findViewById(R.id.gyroValues);
-        magMeasurementTextView = (TextView) findViewById(R.id.degreeCounterM);
-        errorDetectionTextView = (TextView) findViewById(R.id.error_indicator);
-        accMagTextView = (TextView) findViewById(R.id.acc_magneto_count);
-        //audioTextView = (TextView) findViewById(R.id.audio_level);
+        resetButton = (Button) findViewById(R.id.resetButton);
+        resetButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                initializeFile();
+                totalTurn = 0;
+                accumAngle = 0;
+                angleToInitial = 0;
+                numSteps = 0;
+                cachedAccelerometer = new float[3];
+                cachedGyroscope = new float[3];
+                cachedMagnetometer = new float[3];
+                cachedAudioLevel = 0;
+                cachedLightSensor = 0;
+                wifiList = null;
+                stepsTextView.setText("0");
+                distanceTextView.setText("0");
+            }
+        });
 
         initializeSensors();
         initializeFile();
@@ -479,14 +386,6 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             wifiList = wifiManager.getScanResults();
             sb.append("\nNumber Of Wi-Fi connections :" + wifiList.size() + "\n\n");
             numDiscoveredWiFiDevices = wifiList.size();
-
-//            for(int i = 0; i < wifiList.size(); i++){
-//
-//                sb.append(new Integer(i+1).toString() + ". ");
-//                sb.append((wifiList.get(i)).toString());
-//                sb.append("\n\n");
-//            }
-//            Toast.makeText(getApplicationContext(), sb.toString() , Toast.LENGTH_LONG).show();
         }
 
     }

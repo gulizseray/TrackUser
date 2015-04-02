@@ -37,51 +37,12 @@
         android:layout_height="wrap_content" android:layout_below="@id/degrees"
         android:textSize="12pt"/>
 
-    <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/gyroValues" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/degreeCounter"
-        android:textSize="12pt"/>
-
-    <TextView android:text="@string/degrees_text" android:id="@+id/degreesM" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/gyroValues"
-        android:textSize="12pt"/>
-
-    <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/degreeCounterM" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/degreesM"
-        android:textSize="12pt"/>
-
-    <TextView android:text="total_acc_magneto:" android:id="@+id/acc_magneto" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/degreeCounterM"
-        android:textSize="12pt"/>
-
-    <TextView android:text="@string/total_degrees_of_rotation" android:id="@+id/acc_magneto_count" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/acc_magneto"
-        android:textSize="12pt"/>
-
-   <!-- <TextView android:text="@string/audio_text" android:id="@+id/audioLT" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/acc_magneto_count"
-        android:textSize="12pt"/>
-
-    <TextView android:text="0" android:id="@+id/audio_level" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_below="@id/audioLT"
-        android:textSize="12pt"/>-->
-
-    <TextView
-        android:id="@+id/error_indicator"
-        android:layout_width="fill_parent"
-        android:layout_height="80px"
-        android:layout_alignParentTop="true"
-        android:layout_toRightOf="@+id/steps"
-        android:layout_toEndOf="@+id/steps"
-        android:background="#ff19ff14" />
-
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Reset"
         android:id="@+id/resetButton"
-        android:layout_alignBottom="@+id/distanceText"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:onClick="resetDegrees"/>
+        android:onClick="resetDegrees"
+        android:layout_below="@id/degreeCounter" />
 </RelativeLayout>
 
