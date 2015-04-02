@@ -73,6 +73,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     // Unknowns for counting steps
     private int numSteps = 0;
 
+    //compass variables
+    private float compassAngle = 0;
+    private float initialCompassAngle = 0;
+
     // Unknowns for dead reckoning, all angles are in radian
     private float totalTurn = 0;
     public float angleToInitial = 0;
@@ -89,6 +93,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private TextView distanceTextView = null;
     private TextView currentDegreesTextView = null;
     private TextView totalDegreesTextView = null;
+    private TextView compassTextView = null;
 
     private Button resetButton = null;
 
@@ -188,10 +193,14 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         } else if (mySensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
             System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
 
-            float deltaT = System.currentTimeMillis() - lastMagnetTime;
+            //calculate the angle using the compass;
+            compassAngle = (float) Math.atan2(cachedMagnetometer[2], cachedMagnetometer[1]);
 
             //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
             lastMagnetTime = System.currentTimeMillis();
+
+            //update Gui
+            compassTextView.setText(String.format("Mag: %.1f", (compassAngle-initialCompassAngle)*180/Math.PI));
         } else if (mySensor.getType() == Sensor.TYPE_LIGHT) {
 
             cachedLightSensor = sensorEvent.values[0];
@@ -260,6 +269,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         distanceTextView = (TextView) findViewById(R.id.distanceValue);
         totalDegreesTextView = (TextView) findViewById(R.id.degreeCounter);
         currentDegreesTextView = (TextView) findViewById(R.id.currentDegreeCounter);
+        compassTextView = (TextView) findViewById(R.id.compassValue);
         resetButton = (Button) findViewById(R.id.resetButton);
         resetButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -273,6 +283,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 cachedMagnetometer = new float[3];
                 cachedAudioLevel = 0;
                 cachedLightSensor = 0;
+                initialCompassAngle = compassAngle;
                 wifiList = null;
                 stepsTextView.setText("0");
                 distanceTextView.setText("0");

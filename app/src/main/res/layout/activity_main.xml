@@ -29,6 +29,13 @@
         android:layout_height="wrap_content" android:layout_below="@id/current_degrees"
         android:textSize="12pt"/>
 
+    <TextView android:text="@string/current_degrees_of_rotation" android:id="@+id/compassValue" android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/current_degrees"
+        android:textSize="12pt"
+        android:layout_alignParentRight="true"
+         />
+
     <TextView android:text="@string/degrees_text" android:id="@+id/degrees" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_below="@id/currentDegreeCounter"
         android:textSize="12pt"/>
