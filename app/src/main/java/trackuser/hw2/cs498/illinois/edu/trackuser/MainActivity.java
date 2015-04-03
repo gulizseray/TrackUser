@@ -242,7 +242,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + numSteps + "," + angleToDisplay + "," + totalTurn + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
+        String all = timestamp + "," + numSteps + "," + angleToDisplay + "," + compassToInitial + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
         try {
             readingsOutputStream.write(all.getBytes());
             readingsOutputStream.flush();
