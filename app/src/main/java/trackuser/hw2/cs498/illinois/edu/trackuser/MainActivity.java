@@ -14,7 +14,6 @@ import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -56,7 +55,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     private long startTime = System.currentTimeMillis();
     public static final float ALPHA = (float) 0.7f;
-    public static final float STEP_LENGTH = 0.9f;
+    public static final float STEP_LENGTH = 0.35f;
 
     // File related variables
     private File readingsFile;
@@ -74,13 +73,15 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     private int numSteps = 0;
 
     //compass variables
-    private float compassAngle = 0;
-    private float initialCompassAngle = 0;
+    private float compassToNorth = 0;
+    private float compassToInitial = 0;
+    private float compassInitial = 0;
 
     // Unknowns for dead reckoning, all angles are in radian
     private float totalTurn = 0;
     public float angleToInitial = 0;
     public float accumAngle = 0;
+    float angleToDisplay = 0;
     private static final float TURN_THRESHOLD = 0.1745f; // 10 degrees in radians
 
     // Previous update times for unknowns
@@ -182,7 +183,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 accumAngle = 0;
             }
 
-            currentDegreesTextView.setText(String.format("%.1f", Math.toDegrees(angleToInitial + accumAngle) % 360));
+            //Limit angle to [0:360] degrees
+            angleToDisplay = (angleToInitial + accumAngle)% (float) (2 * Math.PI);
+            if (angleToDisplay<0)
+                    angleToDisplay+= 2* Math.PI;
+
+            currentDegreesTextView.setText(String.format("%.1f", Math.toDegrees(angleToDisplay)));
             totalDegreesTextView.setText(String.format("%.1f", Math.toDegrees(totalTurn + Math.abs(accumAngle))));
 
             System.arraycopy(sensorEvent.values, 0, cachedGyroscope, 0, 3);
@@ -194,13 +200,19 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             System.arraycopy(sensorEvent.values, 0, cachedMagnetometer, 0, 3);
 
             //calculate the angle using the compass;
-            compassAngle = (float) Math.atan2(cachedMagnetometer[2], cachedMagnetometer[1]);
+            compassToNorth = (float) (Math.atan2(cachedMagnetometer[1], cachedMagnetometer[0]) + Math.PI);
+            compassToInitial = compassToNorth - compassInitial;
+
+            //Guarantee positive values
+            if(compassToInitial <0)
+                compassToInitial += 2* Math.PI;
+            compassToInitial =  2* (float) Math.PI - compassToInitial;
 
             //Set the last update time to the current time. (Might be a good idea to replace it with += deltaT)
             lastMagnetTime = System.currentTimeMillis();
 
             //update Gui
-            compassTextView.setText(String.format("Mag: %.1f", (compassAngle-initialCompassAngle)*180/Math.PI));
+            compassTextView.setText(String.format("Mag: %.1f", (compassToInitial)*180/Math.PI));
         } else if (mySensor.getType() == Sensor.TYPE_LIGHT) {
 
             cachedLightSensor = sensorEvent.values[0];
@@ -230,7 +242,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + numSteps + "," + angleToInitial + "," + totalTurn + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
+        String all = timestamp + "," + numSteps + "," + angleToDisplay + "," + totalTurn + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
         try {
             readingsOutputStream.write(all.getBytes());
             readingsOutputStream.flush();
@@ -283,7 +295,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                 cachedMagnetometer = new float[3];
                 cachedAudioLevel = 0;
                 cachedLightSensor = 0;
-                initialCompassAngle = compassAngle;
+                compassInitial = compassToNorth;
                 wifiList = null;
                 stepsTextView.setText("0");
                 distanceTextView.setText("0");
