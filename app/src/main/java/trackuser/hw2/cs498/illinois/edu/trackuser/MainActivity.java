@@ -55,7 +55,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     private long startTime = System.currentTimeMillis();
     public static final float ALPHA = (float) 0.7f;
-    public static final float STEP_LENGTH = 0.35f;
+    public static final float STEP_LENGTH = 0.5f;
 
     // File related variables
     private File readingsFile;
@@ -150,7 +150,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         if (cachedAccelerometer[2] > 11.4) {
             // There needs to be at least 300ms between two peaks, otherwise it isn't a step.
-            if (currTime - lastStepCountTime > 300) {
+            if (currTime - lastStepCountTime > 500) {
                 numSteps++;
                 lastStepCountTime = currTime;
                 stepsTextView.setText(String.valueOf(numSteps));
@@ -242,7 +242,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         String mag = cachedMagnetometer[0] + "," + cachedMagnetometer[1] + "," + cachedMagnetometer[2] + ",";
 
 
-        String all = timestamp + "," + numSteps + "," + angleToDisplay + "," + compassToInitial + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + "," + constructWiFiData() + cachedAudioLevel + "\n";
+        String all = timestamp + "," + numSteps + "," + angleToDisplay + "," + compassToInitial + "," + acc + gyr + mag + String.valueOf(cachedLightSensor) + ","  + constructWiFiData() + cachedAudioLevel + "\n";
         try {
             readingsOutputStream.write(all.getBytes());
             readingsOutputStream.flush();
@@ -285,6 +285,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         resetButton = (Button) findViewById(R.id.resetButton);
         resetButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                readingsFile.delete();
                 initializeFile();
                 totalTurn = 0;
                 accumAngle = 0;
